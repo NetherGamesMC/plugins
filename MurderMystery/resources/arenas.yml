@@ -1,0 +1,34 @@
+---
+arenas: #List of arenas
+  arena1: #Arena name
+    time: 5 #Time of match (in minutes)
+    mode: 0 # 0 => Classic, 1=> Infection
+    min-players: 4
+    max-players: 16
+    resources:
+      item: 266 #Item ID
+      at-time: 4 #How many resources are spawned in x seconds
+      time: 5 #Time of resource to generate (in seconds)
+      spawns:
+        1:
+          x:
+          y:
+          z:
+        2:
+          x:
+          y:
+          z:
+    lobby-spawn: #Position of lobby spawn
+      x: 0
+      y: 0
+      z: 0
+      yaw: 0
+      pitch: 0
+    spawns: #Position of player spawn
+      1:
+        x: 0
+        y: 0
+        z: 0
+        yaw: 0
+        pitch: 0
+...

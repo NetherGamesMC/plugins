@@ -1,0 +1,91 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^PHPDoc tag @var with type pocketmine\\player\\IPlayer is not subtype of native type pocketmine\\player\\OfflinePlayer\|pocketmine\\player\\Player\|null\.$#'
+			identifier: varTag.nativeType
+			count: 1
+			path: session/replay/Replay.php
+
+		-
+			message: '#^Cannot access offset ''game_type'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Cannot access offset ''map_name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Cannot access offset ''players'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Cannot access offset ''protocol_id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Cannot access offset ''replay_id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Cannot access offset ''server_type'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Cannot access offset ''time'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Parameter \#1 \$replayId of static method libReplay\\session\\replay\\utils\\ReplayInfo\:\:create\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Parameter \#2 \$protocolId of static method libReplay\\session\\replay\\utils\\ReplayInfo\:\:create\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Parameter \#3 \$serverType of static method libReplay\\session\\replay\\utils\\ReplayInfo\:\:create\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Parameter \#4 \$gameType of static method libReplay\\session\\replay\\utils\\ReplayInfo\:\:create\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Parameter \#5 \$mapName of static method libReplay\\session\\replay\\utils\\ReplayInfo\:\:create\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: session/replay/ReplayManager.php
+
+		-
+			message: '#^Parameter \#7 \$time of static method libReplay\\session\\replay\\utils\\ReplayInfo\:\:create\(\) expects int, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: session/replay/ReplayManager.php

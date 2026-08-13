@@ -1,0 +1,21 @@
+{
+  "name": "nethergamesmc/libvanilla",
+  "description": "A Vanilla library for PocketMine-MP",
+  "license": "proprietary",
+  "type": "project",
+  "require": {
+    "php": "^8.1",
+    "muqsit/asynciterator": "dev-pm5",
+    "nethergamesmc/libphysx": "dev-master"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "2.2.2",
+    "nethergamesmc/pocketmine-mp": "dev-stable"
+  },
+  "autoload": {
+    "psr-4": {
+      "libVanilla\\": "/"
+    }
+  },
+  "minimum-stability": "dev"
+}

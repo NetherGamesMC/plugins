@@ -1,0 +1,80 @@
+{
+	"format_version": "1.10.0",
+	"geometry.pet.werewolf": {
+		"texturewidth": 64,
+		"textureheight": 64,
+		"visible_bounds_width": 2,
+		"visible_bounds_height": 3,
+		"visible_bounds_offset": [0, 0, 0],
+		"bones": [
+			{
+				"name": "root",
+				"pivot": [0, 12, 0]
+			},
+			{
+				"name": "waist",
+				"parent": "root",
+				"pivot": [0, 12, 0]
+			},
+			{
+				"name": "body",
+				"parent": "waist",
+				"pivot": [0, 24, 0],
+				"cubes": [
+					{"origin": [-4, 18, -3], "size": [8, 6, 6], "uv": [32, 0]},
+					{"origin": [-3, 12, -2], "size": [6, 7, 4], "uv": [0, 16]},
+					{"origin": [-1, 11, 1], "size": [2, 2, 6], "uv": [16, 41]}
+				]
+			},
+			{
+				"name": "head",
+				"parent": "body",
+				"pivot": [0, 24, 0],
+				"cubes": [
+					{"origin": [-2.5, 24, -7], "size": [5, 3, 3], "uv": [16, 50]},
+					{"origin": [-4, 24, -4], "size": [8, 8, 8], "uv": [0, 0]},
+					{"origin": [-4, 32, -1], "size": [2, 2, 1], "uv": [32, 53]},
+					{"origin": [2, 32, -1], "size": [2, 2, 1], "uv": [32, 50]}
+				]
+			},
+			{
+				"name": "rightArm",
+				"parent": "body",
+				"pivot": [-5, 21.5, 0],
+				"reset": true,
+				"cubes": [
+					{"origin": [-7, 11.5, -2], "size": [3, 12, 4], "uv": [20, 16]}
+				]
+			},
+			{
+				"name": "leftArm",
+				"parent": "body",
+				"pivot": [5, 21.5, 0],
+				"reset": true,
+				"cubes": [
+					{"origin": [4, 11.5, -2], "size": [3, 12, 4], "uv": [20, 16], "mirror": true}
+				]
+			},
+			{
+				"name": "rightLeg",
+				"parent": "root",
+				"pivot": [-2, 12, 0],
+				"cubes": [
+					{"origin": [-4, 7, -2], "size": [4, 5, 4], "uv": [0, 32]},
+					{"origin": [-4, 2, -1], "size": [4, 5, 4], "uv": [0, 41]},
+					{"origin": [-4, 0, -2], "size": [4, 2, 4], "uv": [32, 41]}
+				]
+			},
+			{
+				"name": "leftLeg",
+				"parent": "root",
+				"pivot": [2, 12, 0],
+				"cubes": [
+					{"origin": [0, 7, -2], "size": [4, 5, 4], "uv": [0, 32], "mirror": true},
+					{"origin": [0, 2, -1], "size": [4, 5, 4], "uv": [0, 41], "mirror": true},
+					{"origin": [0, 0, -2], "size": [4, 2, 4], "uv": [32, 41], "mirror": true}
+				]
+			}
+		]
+	}
+}

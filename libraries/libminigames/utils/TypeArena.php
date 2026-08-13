@@ -1,0 +1,52 @@
+<?php
+/**
+ *   _ _ _               _       _
+ *  | (_) |             (_)     (_)
+ *  | |_| |__  _ __ ___  _ _ __  _  __ _  __ _ _ __ ___   ___  ___
+ *  | | | '_ \| '_ ` _ \| | '_ \| |/ _` |/ _` | '_ ` _ \ / _ \/ __|
+ *  | | | |_) | | | | | | | | | | | (_| | (_| | | | | | |  __/\__ \
+ *  |_|_|_.__/|_| |_| |_|_|_| |_|_|\__, |\__,_|_| |_| |_|\___||___/
+ *                                  __/ |
+ *                                 |___/
+ *
+ * Copyright (C) 2016-2026 NetherGames Network
+ *
+ * This is private software, you cannot redistribute and/or modify it in any way
+ * unless given explicit permission to do so. If you have not been given explicit
+ * permission to view or modify this software you should take the appropriate actions
+ * to remove this software from your device immediately.
+ *
+ * @author Driesboy
+ *
+ */
+declare(strict_types=1);
+
+namespace libminigames\utils;
+
+use pocketmine\player\Player;
+
+/**
+ * @see TypeArenaTrait
+ */
+interface TypeArena
+{
+    /**
+     * @return string[]
+     */
+    public static function getTypes(): array;
+
+    public function checkTypeVotes(): void;
+
+    public function getType(): int;
+
+    public function getTypeName(): string;
+
+    public function addTypeVote(Player $player, int $type): void;
+
+    /**
+     * @return int[]
+     */
+    public function getTypeVotes(): array;
+
+    public function removeTypeVote(Player $player): void;
+}

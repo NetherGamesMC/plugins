@@ -1,0 +1,11 @@
+name: xTheBridge
+main: bridges\TheBridge
+author: [Driesboy, Ragnok123]
+version: 2.0.2
+api: [5.0.0]
+depend: NGEssentials
+
+permissions:
+  nethergames.bridge.admin:
+    description: Allows to create/edit The Bridge
+    default: op

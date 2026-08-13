@@ -1,0 +1,16 @@
+# Configuration file for the NGEssentials plugin
+# IMPORTANT: Server setup
+# serverType is the kind of server this is (BW, MM, SW, Lobby, Creative).
+serverRegion: ''
+serverType: 'Beta'
+gameType: ''
+serverId: 1
+
+# DEVELOPMENT MODE
+developmentMode: true
+# This kind of development mode will enable proxy as well as disabling other ability
+# such as connecting to the server using raklib.
+hybridDevelopmentMode: false
+
+# KAFKA
+kafkaEnabled: true

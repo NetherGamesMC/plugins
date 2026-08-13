@@ -1,0 +1,11 @@
+name: xConquests
+main: conquests\Conquests
+authors: [ matcracker, driesboy ]
+version: 2.21
+api: [ 5.0.0 ]
+depend: NGEssentials
+
+permissions:
+  nethergames.cq.admin:
+    description: Allows to create/edit CQ game
+    default: op

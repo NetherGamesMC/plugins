@@ -1,0 +1,286 @@
+name: Build
+
+on:
+  workflow_run:
+    workflows: ["PHPStan CI"]
+    types: [completed]
+
+concurrency:
+  group: build-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changed plugins
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            ngessentials:
+              - 'NGEssentials/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            lobby:
+              - 'Lobby/**'
+              - 'shared/**'
+              - 'scripts/**'
+            skywars:
+              - 'Skywars/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            bedwars:
+              - 'Bedwars/**'
+              - 'shared/**'
+              - 'scripts/**'
+            conquests:
+              - 'Conquests/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            duels:
+              - 'Duels/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            mommasays:
+              - 'MommaSays/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            murdermystery:
+              - 'MurderMystery/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            soccer:
+              - 'Soccer/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            thebridge:
+              - 'TheBridge/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            uhc:
+              - 'UHC/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            survivalgames:
+              - 'SurvivalGames/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            meltdown:
+              - 'Meltdown/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+      - name: Build matrix
+        id: set-matrix
+        env:
+          MSG: ${{ github.event.workflow_run.head_commit.message }}
+        run: |
+          FORCE_ALL=false
+          if echo "$MSG" | grep -qE '\[All\]'; then
+            FORCE_ALL=true
+          fi
+
+          ALL='[
+            {"plugin":"NGEssentials","artifact":"NGEssentials","phar":"NGEssentials.phar","composer_file":"composer-build.json","needs_install":true,"warning_fixes":true},
+            {"plugin":"Lobby","artifact":"xLobby","phar":"xLobby.phar","needs_install":false},
+            {"plugin":"Skywars","artifact":"xSkywars","phar":"xSkywars.phar","needs_install":false},
+            {"plugin":"Bedwars","artifact":"xBedwars","phar":"xBedwars.phar","composer_file":"composer.json","needs_install":true},
+            {"plugin":"Conquests","artifact":"xConquests","phar":"xConquests.phar","composer_file":"composer.json","needs_install":true},
+            {"plugin":"Duels","artifact":"xDuels","phar":"xDuels.phar","needs_install":false},
+            {"plugin":"MommaSays","artifact":"xMommaSays","phar":"xMommaSays.phar","needs_install":false},
+            {"plugin":"MurderMystery","artifact":"xMurderMystery","phar":"xMurderMystery.phar","needs_install":false},
+            {"plugin":"Soccer","artifact":"xSoccer","phar":"xSoccer.phar","needs_install":false},
+            {"plugin":"TheBridge","artifact":"xTheBridge","phar":"xTheBridge.phar","composer_file":"composer.json","needs_install":true},
+            {"plugin":"UHC","artifact":"xUHC","phar":"xUHC.phar","needs_install":false},
+            {"plugin":"SurvivalGames","artifact":"xSurvivalGames","phar":"xSurvivalGames.phar","composer_file":"composer.json","needs_install":true},
+            {"plugin":"Meltdown","artifact":"xMeltdown","phar":"xMeltdown.phar","needs_install":false}
+          ]'
+
+          if [ "$FORCE_ALL" = "true" ]; then
+            INCLUDE=$(echo "$ALL" | jq -c '.')
+          else
+            INCLUDE='[]'
+            if [ "${{ steps.filter.outputs.ngessentials }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[0]]')
+            fi
+            if [ "${{ steps.filter.outputs.lobby }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[1]]')
+            fi
+            if [ "${{ steps.filter.outputs.skywars }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[2]]')
+            fi
+            if [ "${{ steps.filter.outputs.bedwars }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[3]]')
+            fi
+            if [ "${{ steps.filter.outputs.conquests }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[4]]')
+            fi
+            if [ "${{ steps.filter.outputs.duels }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[5]]')
+            fi
+            if [ "${{ steps.filter.outputs.mommasays }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[6]]')
+            fi
+            if [ "${{ steps.filter.outputs.murdermystery }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[7]]')
+            fi
+            if [ "${{ steps.filter.outputs.soccer }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[8]]')
+            fi
+            if [ "${{ steps.filter.outputs.thebridge }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[9]]')
+            fi
+            if [ "${{ steps.filter.outputs.uhc }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[10]]')
+            fi
+            if [ "${{ steps.filter.outputs.survivalgames }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[11]]')
+            fi
+            if [ "${{ steps.filter.outputs.meltdown }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[12]]')
+            fi
+          fi
+
+          echo "matrix={\"include\":$INCLUDE}" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build ${{ matrix.plugin }}
+    needs: changes
+    runs-on: ubuntu-latest
+    if: "github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.matrix != '{\"include\":[]}'"
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Cache PHP Release
+        id: cache-php
+        uses: actions/cache@v6
+        with:
+          path: bin
+          key: php-8.4-pm5-linux-x86_64-v1
+
+      - name: Download PHP Release
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          file: PHP-8.4-Linux-x86_64-PM5.tar.gz
+          repo: NetherGamesMC/php-build-scripts
+          version: "tags/pm5-php-8.4-latest"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Unpack PHP Release
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        run: |
+          tar -xzvf PHP-8.4-Linux-x86_64-PM5.tar.gz
+          rm -f PHP-8.4-Linux-x86_64-PM5.tar.gz
+
+      - name: Cache vendor
+        id: cache-vendor
+        if: matrix.needs_install
+        uses: actions/cache@v6
+        with:
+          path: ${{ matrix.plugin }}/vendor
+          key: vendor-${{ matrix.plugin }}-${{ hashFiles(format('{0}/{1}', matrix.plugin, matrix.composer_file), 'shared/repositories.json') }}
+
+      - name: Cache Composer metadata & repo cache
+        if: matrix.needs_install && steps.cache-vendor.outputs.cache-hit != 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer
+          key: composer-cache-${{ runner.os }}-${{ hashFiles(format('{0}/{1}', matrix.plugin, matrix.composer_file), 'shared/repositories.json') }}
+          restore-keys: |
+            composer-cache-${{ runner.os }}-
+            composer-cache-
+
+      - name: Cache Composer Phar
+        id: cache-composer-phar
+        if: matrix.needs_install && steps.cache-vendor.outputs.cache-hit != 'true'
+        uses: actions/cache@v6
+        with:
+          path: bin/composer.phar
+          key: composer-stable-phar-v1
+
+      - name: Download Composer
+        if: matrix.needs_install && steps.cache-vendor.outputs.cache-hit != 'true' && steps.cache-composer-phar.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ./bin
+          curl -o ./bin/composer.phar "https://getcomposer.org/composer-stable.phar"
+
+      - name: Add Composer GitHub access token
+        if: matrix.needs_install && steps.cache-vendor.outputs.cache-hit != 'true'
+        env:
+          NG_TOKEN: ${{ secrets.ng_token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TOKEN="${NG_TOKEN:-$GITHUB_TOKEN}"
+          ./bin/php7/bin/php ./bin/composer.phar config --global github-oauth.github.com "$TOKEN"
+
+      - name: Merge shared repositories
+        if: matrix.needs_install && steps.cache-vendor.outputs.cache-hit != 'true'
+        working-directory: ${{ matrix.plugin }}
+        run: ../bin/php7/bin/php ../scripts/merge-composer.php ${{ matrix.composer_file }} ../shared/repositories.json composer.merged.json
+
+      - name: Install Composer dependencies
+        if: matrix.needs_install && steps.cache-vendor.outputs.cache-hit != 'true'
+        working-directory: ${{ matrix.plugin }}
+        run: COMPOSER_ROOT_VERSION=dev-stable COMPOSER=composer.merged.json ../bin/php7/bin/php ../bin/composer.phar install --prefer-dist --no-interaction --no-dev --no-progress
+
+      - name: Apply warning fixes
+        if: matrix.warning_fixes
+        working-directory: ${{ matrix.plugin }}
+        run: |
+          cp .github/warning-fixes.php ./
+          ../bin/php7/bin/php ./warning-fixes.php
+
+      - name: Cache pharbuilder-rs
+        id: cache-pharbuilder
+        uses: actions/cache@v6
+        with:
+          path: pharbuilder
+          key: pharbuilder-rs-binary-v1
+
+      - name: Download pharbuilder-rs
+        if: steps.cache-pharbuilder.outputs.cache-hit != 'true'
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          file: pharbuilder
+          repo: NetherGamesMC/pharbuilder-rs
+          token: ${{ secrets.ng_token }}
+
+      - name: Build
+        run: |
+          chmod +x pharbuilder
+          ./pharbuilder -i ./${{ matrix.plugin }} -o ./${{ matrix.phar }}
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.phar }}

@@ -1,0 +1,12 @@
+name: libPhysX
+description: libPhysX was meant to be a stripped version of Nvidia's PhysX Physics Engine, developed purely
+  for the use cases of NetherGames and its systems. In no way shape or form is libPhysX related to Nvidia's
+  PhysX except for the logical understanding between the systems.
+developer: [ Shaheryar Sohail, Driesboy ]
+version: 0.0.5
+copyright: NetherGames 2019
+
+Internal:
+  - Rotation:
+      - yaw: Represents the yaw of the rotation.
+      - pitch: Represents the pitch of the rotation.

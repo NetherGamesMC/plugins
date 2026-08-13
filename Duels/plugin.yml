@@ -1,0 +1,11 @@
+name: xDuels
+main: duels\Duels
+author: [matcracker, Driesboy, k3ithos]
+version: 2.0
+api: [5.0.0]
+depend: NGEssentials
+
+permissions:
+  nethergames.duels.admin:
+    description: Allows to create/edit Duels game
+    default: op

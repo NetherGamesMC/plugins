@@ -1,0 +1,10 @@
+parameters:
+  level: max
+  ignoreErrors:
+    - identifier: missingType.iterableValue
+  paths:
+    - .
+  excludePaths:
+    analyse:
+      - bin (?)
+      - vendor

@@ -1,0 +1,10 @@
+parameters:
+  ignoreErrors:
+    - identifier: missingType.iterableValue
+    - identifier: argument.type
+      path: src/skywars/GameTableType.php
+  level: 6
+  paths:
+    - src
+  scanDirectories:
+    - vendor

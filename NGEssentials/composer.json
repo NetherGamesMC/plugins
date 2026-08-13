@@ -1,0 +1,67 @@
+{
+  "name" : "nethergamesmc/ngessentials",
+  "description" : "NGEssentials plugin for PocketMine-MP",
+  "license" : "proprietary",
+  "type" : "project",
+  "require" : {
+    "php" : "^8.3",
+    "ext-curl" : "*",
+    "ext-gd" : "*",
+    "ext-igbinary" : "*",
+    "ext-json" : "*",
+    "ext-mysqli" : "*",
+    "ext-openssl" : "*",
+    "ext-pmmpthread" : "^6.0.1",
+    "ext-sockets" : "*",
+    "ext-yaml" : "*",
+    "nethergamesmc/libasyncio" : "dev-stable",
+    "nethergamesmc/libasyncurl" : "dev-pm5",
+    "nethergamesmc/libasynql" : "dev-pm5",
+    "nethergamesmc/libdiscord" : "dev-stable",
+    "nethergamesmc/libforms" : "dev-stable",
+    "nethergamesmc/libminigames" : "dev-stable",
+    "nethergamesmc/libphysx" : "dev-master",
+    "nethergamesmc/libproxy" : "dev-quic",
+    "nethergamesmc/libreplay" : "dev-stable",
+    "nethergamesmc/libvanilla" : "dev-stable",
+    "nethergamesmc/quiche" : "dev-master",
+    "sof3/await-generator" : "3.6.1"
+  },
+  "require-dev" : {
+    "kwn/php-rdkafka-stubs" : "dev-master",
+    "nethergamesmc/lobby" : "dev-stable",
+    "nethergamesmc/pocketmine-mp" : "dev-stable",
+    "nethergamesmc/skyblock" : "dev-pm5",
+    "phpstan/phpstan" : "2.1.29"
+  },
+  "repositories" : [
+    {
+      "type" : "path",
+      "url" : "../Lobby",
+      "options" : {
+        "versions" : {
+          "nethergamesmc/lobby" : "dev-stable"
+        }
+      }
+    },
+    {
+      "type" : "vcs",
+      "url" : "git@github.com:NetherGamesMC/SkyBlock.git"
+    },
+    {
+      "type" : "vcs",
+      "url" : "git@github.com:NetherGamesMC/libMMO.git"
+    }
+  ],
+  "autoload" : {
+    "psr-4" : {
+      "" : [
+        "src"
+      ]
+    },
+    "files" : [
+      "src/NetherGames/NGEssentials/CoreConstants.php"
+    ]
+  },
+  "minimum-stability" : "dev"
+}

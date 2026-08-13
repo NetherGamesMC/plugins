@@ -1,0 +1,61 @@
+{
+  "geometry.pets.elephant": {
+    "texturewidth": 128,
+    "textureheight": 128,
+    "visible_bounds_width": 3,
+    "visible_bounds_height": 2,
+    "visible_bounds_offset": [0, 1, 0],
+    "bones": [
+      {
+        "name": "body",
+        "pivot": [0, 24, 0],
+        "cubes": [
+          {"origin": [-7, 8, -8], "size": [14, 12, 22], "uv": [0, 0]},
+          {"origin": [-1, 12, 13], "size": [2, 2, 4], "uv": [0, 0]}
+        ]
+      },
+      {
+        "name": "head",
+        "pivot": [0, 20, -7],
+        "cubes": [
+          {"origin": [-4, 12, -16], "size": [8, 9, 10], "uv": [0, 34]},
+          {"origin": [-12, 13, -11], "size": [8, 10, 1], "uv": [18, 72]},
+          {"origin": [4, 13, -11], "size": [8, 10, 1], "uv": [0, 72]},
+          {"origin": [-2, 9, -18], "size": [4, 6, 4], "uv": [36, 72]},
+          {"origin": [1.5, 3, -18], "size": [-3, 6, 3], "uv": [52, 72]}
+        ]
+      },
+      {
+        "name": "rightLeg",
+        "pivot": [-1.9, 12, 12],
+        "cubes": [
+          {"origin": [-6.9, 0, 7], "size": [5, 12, 6], "uv": [44, 54]}
+        ]
+      },
+      {
+        "name": "leftLeg",
+        "pivot": [1.9, 12, 11],
+        "mirror": true,
+        "cubes": [
+          {"origin": [1.9, 0, 7], "size": [5, 12, 6], "uv": [22, 54], "mirror": false}
+        ]
+      },
+      {
+        "name": "leftArm",
+        "pivot": [5, 11.5, -5],
+        "reset": true,
+        "cubes": [
+          {"origin": [1, 0, -13], "size": [5, 12, 6], "uv": [0, 54]}
+        ]
+      },
+      {
+        "name": "rightArm",
+        "pivot": [-5, 11.5, -5],
+        "reset": true,
+        "cubes": [
+          {"origin": [-6, 0, -13], "size": [5, 12, 6], "uv": [40, 34]}
+        ]
+      }
+    ]
+  }
+}

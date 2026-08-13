@@ -1,0 +1,20 @@
+---
+sign-settings:
+  format:
+    line1: "§f-* §d§lMM§r§f *-"
+    line2: "§b{MMARENA}"
+  knockback-enabled: true
+
+player-settings:
+  force-lobby-spawn: true
+
+reward-settings:
+  enabled: true
+  value: 5
+  command: "elo add {PLAYER} {VALUE}"
+
+banned-commands-in-game:
+  - /give
+  - /tp
+  - /track
+...
