@@ -1,0 +1,24 @@
+---
+arenas: #List of arenas
+  arena1: #Arena name
+    time: 5 #Time of match (in minutes)
+    chest-refill-time: 5
+    teams:
+      colors: #Available teams in the arena
+        - red
+        - blue
+        - green
+    spawns: #Position of various spawns for teams
+      red:
+        x: 0
+        y: 0
+        z: 0
+        yaw: 0
+        pitch: 0
+      blue:
+        x: 0
+        y: 0
+        z: 0
+        yaw: 0
+        pitch: 0
+...

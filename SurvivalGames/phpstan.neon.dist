@@ -1,0 +1,11 @@
+parameters:
+    ignoreErrors:
+        - identifier: missingType.iterableValue
+        -
+            identifier: argument.type
+            path: src/survivalgames/chest/LootTableType.php
+    level: 6
+    paths:
+        - src
+    scanDirectories:
+        - vendor

@@ -1,0 +1,14 @@
+parameters:
+  ignoreErrors:
+    - identifier: trait.unused
+  level: max
+  paths:
+    - .
+  scanDirectories:
+    - vendor
+  excludePaths:
+    analyse:
+      - bin (?)
+      - vendor
+includes:
+  - phpstan-baseline.neon

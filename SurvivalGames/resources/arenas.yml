@@ -1,0 +1,40 @@
+#
+#       _____                  _            _    _____
+#     / ____|                (_)          | |  / ____|
+#    | (___  _   _ _ ____   _____   ____ _| | | |  __  __ _ _ __ ___   ___  ___
+#    \___ \| | | | '__\ \ / / \ \ / / _` | | | | |_ |/ _` | '_ ` _ \ / _ \/ __|
+#    ____) | |_| | |   \ V /| |\ V / (_| | | | |__| | (_| | | | | | |  __/\__ \
+#   |_____/ \__,_|_|    \_/ |_| \_/ \__,_|_|  \_____|\__,_|_| |_| |_|\___||___/
+#
+#   Arena Configuration File Preview
+---
+arenas:
+  Arena-1:
+    # These are the spawns for players when they joined the arena.
+    spawns:
+      - x: 3218.407000
+        "y": 5.000000
+        z: 218.509600
+        yaw: 359.820068
+        pitch: -2.730148
+    # The midpoint of the border, we can still use world's border size but its better
+    # to being able to configure it here.
+    midpoint:
+      x: 0
+      "y": 33
+      z: -3
+    # Border settings, each settings has been carefully refined, precision matters, physics based borders.
+    # Each states (You can define your own very unique name) has to be "BLOCKS_DISTANCE;TIME_UNIT". The only thing you will
+    # have to care is the order of your states, because it the states will be read from 0 to end. The time unit are in
+    # unit SECONDS. For final-round, MUST EXISTS IN THIS CONFIG, are "BLOCKS_DISTANCE;COUNTDOWN_TIME;TIME_UNIT", just like
+    # the first one, except COUNTDOWN_TIME are used for "Sudden Death" countdown in this game.
+    #
+    # The total area of the circle will be the sum of each BLOCKS_DISTANCE, for instance: (25 + 75 + 100 + 32),
+    # so total area of these settings are: 232 blocks, usually this is used as the radius of a circle.
+    # Note: You can still go over more than 10 minutes but events will not be called after that...
+    border-settings:
+      state-1: "25;180"
+      state-2: "75;240"
+      state-3: "100;180"
+      final-round: "32;60;60"
+...

@@ -1,0 +1,7 @@
+# Configuration file for the NGEssentials plugin
+# IMPORTANT: Server setup
+# serverType is the kind of server this is (BW, MM, SW, Lobby, Creative).
+serverType: '__SERVER_TYPE__'
+
+# DEVELOPMENT MODE (Disables Proxy)
+developmentMode: false

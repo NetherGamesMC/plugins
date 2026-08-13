@@ -1,0 +1,7 @@
+name: Lobby
+main: lobby\Lobby
+author: xNatsuri
+version: 1.0.0
+api: [ 5.0.0 ]
+depend:
+  - NGEssentials

@@ -1,0 +1,21 @@
+{
+    "name": "nethergamesmc/libdiscord",
+    "version": "1.1.0",
+    "description": "A library for the Discord API",
+    "license": "proprietary",
+    "type": "project",
+    "require": {
+        "php": "^8.0",
+        "nethergamesmc/libasyncurl": "dev-pm5"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "2.1.29",
+        "nethergamesmc/pocketmine-mp": "dev-stable"
+    },
+    "autoload": {
+        "psr-4": {
+            "libDiscord\\": "/"
+        }
+    },
+    "minimum-stability": "dev"
+}

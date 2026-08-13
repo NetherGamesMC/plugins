@@ -1,0 +1,10 @@
+name: xMurderMystery
+main: murdermystery\MurderMystery
+author: [matcracker, Driesboy]
+version: 5.2
+api: [5.0.0]
+depend: NGEssentials
+permissions:
+  nethergames.mm.admin:
+    description: Allows to create/edit MM game
+    default: op

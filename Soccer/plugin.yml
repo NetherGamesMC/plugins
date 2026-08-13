@@ -1,0 +1,6 @@
+name: xSoccer
+main: soccer\Soccer
+author: Shaheryar Sohail
+version: 2.0
+api: [5.0.0]
+depend: NGEssentials

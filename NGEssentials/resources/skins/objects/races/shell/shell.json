@@ -1,0 +1,186 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.object.races.shell",
+				"texture_width": 32,
+				"texture_height": 32,
+				"visible_bounds_width": 2,
+				"visible_bounds_height": 1,
+				"visible_bounds_offset": [
+					0,
+					1,
+					0
+				]
+			},
+			"bones": [
+				{
+					"name": "body",
+					"pivot": [
+						0,
+						0,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								-3.5,
+								0.75,
+								-3.5
+							],
+							"size": [
+								7,
+								4,
+								7
+							],
+							"uv": [
+								0,
+								0
+							]
+						},
+						{
+							"origin": [
+								-3.5,
+								4.75,
+								-0.5
+							],
+							"size": [
+								1,
+								1,
+								1
+							],
+							"uv": [
+								0,
+								0
+							]
+						},
+						{
+							"origin": [
+								0.5,
+								4.75,
+								-0.5
+							],
+							"size": [
+								1,
+								2,
+								1
+							],
+							"uv": [
+								0,
+								0
+							]
+						},
+						{
+							"origin": [
+								3.5,
+								2.75,
+								-0.5
+							],
+							"size": [
+								2,
+								1,
+								1
+							],
+							"uv": [
+								0,
+								3
+							]
+						},
+						{
+							"origin": [
+								-2.5,
+								3.75,
+								-4.5
+							],
+							"size": [
+								1,
+								1,
+								1
+							],
+							"uv": [
+								0,
+								0
+							]
+						},
+						{
+							"origin": [
+								-2.5,
+								3.75,
+								3.5
+							],
+							"size": [
+								1,
+								1,
+								1
+							],
+							"uv": [
+								0,
+								0
+							]
+						},
+						{
+							"origin": [
+								1.5,
+								2.75,
+								-4.5
+							],
+							"size": [
+								1,
+								1,
+								1
+							],
+							"uv": [
+								0,
+								0
+							]
+						},
+						{
+							"origin": [
+								1.5,
+								2.75,
+								3.5
+							],
+							"size": [
+								1,
+								1,
+								1
+							],
+							"uv": [
+								0,
+								0
+							]
+						}
+					]
+				},
+				{
+					"name": "jacket",
+					"pivot": [
+						0,
+						0,
+						0
+					],
+					"cubes": [
+						{
+							"origin": [
+								-3.5,
+								-0.5,
+								-3.5
+							],
+							"size": [
+								7,
+								5,
+								7
+							],
+							"inflate": -0.5,
+							"uv": [
+								0,
+								0
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

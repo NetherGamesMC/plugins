@@ -1,0 +1,10 @@
+parameters:
+  level: max
+  paths:
+    - .
+  excludePaths:
+    analyse:
+      - bin (?)
+      - vendor
+includes:
+  - phpstan-baseline.neon

@@ -1,0 +1,524 @@
+name: Docker
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+
+concurrency:
+  group: docker-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect changed components
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    outputs:
+      build_base: ${{ steps.set-matrix.outputs.build_base }}
+      build_uhc: ${{ steps.set-matrix.outputs.build_uhc }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            base:
+              - 'NGEssentials/**'
+              - 'Dockerfile'
+              - 'shared/**'
+              - 'scripts/**'
+              - 'libraries/**'
+              - '.github/workflows/docker.yml'
+            lobby:
+              - 'Lobby/**'
+              - 'shared/**'
+              - 'scripts/**'
+            skywars:
+              - 'Skywars/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            bedwars:
+              - 'Bedwars/**'
+              - 'shared/**'
+              - 'scripts/**'
+            conquests:
+              - 'Conquests/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            duels:
+              - 'Duels/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            mommasays:
+              - 'MommaSays/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            murdermystery:
+              - 'MurderMystery/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            soccer:
+              - 'Soccer/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            thebridge:
+              - 'TheBridge/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            survivalgames:
+              - 'SurvivalGames/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            meltdown:
+              - 'Meltdown/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+            uhc:
+              - 'UHC/**'
+              - 'libraries/**'
+              - 'shared/**'
+              - 'scripts/**'
+      - name: Build matrix
+        id: set-matrix
+        env:
+          MSG: ${{ github.event.workflow_run.head_commit.message }}
+        run: |
+          FORCE_ALL=false
+          if echo "$MSG" | grep -qE '\[All\]'; then
+            FORCE_ALL=true
+          fi
+
+          BUILD_BASE=false
+          if [ "$FORCE_ALL" = "true" ] || [ "${{ steps.filter.outputs.base }}" = "true" ] || echo "$MSG" | grep -qE '\[Base\]'; then
+            BUILD_BASE=true
+          fi
+
+          BUILD_UHC=false
+          if [ "$FORCE_ALL" = "true" ] || [ "${{ steps.filter.outputs.uhc }}" = "true" ]; then
+            BUILD_UHC=true
+          fi
+
+          ALL='[
+            {"plugin":"Lobby","artifact":"xLobby","phar":"xLobby.phar","tag":"lobby"},
+            {"plugin":"Skywars","artifact":"xSkywars","phar":"xSkywars.phar","tag":"skywars"},
+            {"plugin":"Bedwars","artifact":"xBedwars","phar":"xBedwars.phar","tag":"bedwars"},
+            {"plugin":"Conquests","artifact":"xConquests","phar":"xConquests.phar","tag":"conquests"},
+            {"plugin":"Duels","artifact":"xDuels","phar":"xDuels.phar","tag":"duels"},
+            {"plugin":"MommaSays","artifact":"xMommaSays","phar":"xMommaSays.phar","tag":"mommasays"},
+            {"plugin":"MurderMystery","artifact":"xMurderMystery","phar":"xMurderMystery.phar","tag":"murdermystery"},
+            {"plugin":"Soccer","artifact":"xSoccer","phar":"xSoccer.phar","tag":"soccer"},
+            {"plugin":"TheBridge","artifact":"xTheBridge","phar":"xTheBridge.phar","tag":"thebridge"},
+            {"plugin":"SurvivalGames","artifact":"xSurvivalGames","phar":"xSurvivalGames.phar","tag":"survivalgames"},
+            {"plugin":"Meltdown","artifact":"xMeltdown","phar":"xMeltdown.phar","tag":"meltdown"}
+          ]'
+
+          if [ "$FORCE_ALL" = "true" ]; then
+            INCLUDE=$(echo "$ALL" | jq -c '.')
+          else
+            INCLUDE='[]'
+            if [ "${{ steps.filter.outputs.lobby }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[0]]')
+            fi
+            if [ "${{ steps.filter.outputs.skywars }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[1]]')
+            fi
+            if [ "${{ steps.filter.outputs.bedwars }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[2]]')
+            fi
+            if [ "${{ steps.filter.outputs.conquests }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[3]]')
+            fi
+            if [ "${{ steps.filter.outputs.duels }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[4]]')
+            fi
+            if [ "${{ steps.filter.outputs.mommasays }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[5]]')
+            fi
+            if [ "${{ steps.filter.outputs.murdermystery }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[6]]')
+            fi
+            if [ "${{ steps.filter.outputs.soccer }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[7]]')
+            fi
+            if [ "${{ steps.filter.outputs.thebridge }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[8]]')
+            fi
+            if [ "${{ steps.filter.outputs.survivalgames }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[9]]')
+            fi
+            if [ "${{ steps.filter.outputs.meltdown }}" = "true" ]; then
+              INCLUDE=$(echo "$INCLUDE" | jq -c --argjson all "$ALL" '. += [$all[10]]')
+            fi
+          fi
+
+          echo "build_base=$BUILD_BASE" >> $GITHUB_OUTPUT
+          echo "build_uhc=$BUILD_UHC" >> $GITHUB_OUTPUT
+          echo "matrix={\"include\":$INCLUDE}" >> $GITHUB_OUTPUT
+
+  quiche:
+    name: Build quiche
+    needs: changes
+    runs-on: ubuntu-latest
+    if: "github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.build_base == 'true'"
+    env:
+      QUICHE_VERSION: 0.29.2
+    steps:
+      - name: Cache quiche
+        id: cache-quiche
+        uses: actions/cache@v6
+        with:
+          path: quiche-build
+          key: "quiche-${{ env.QUICHE_VERSION }}"
+
+      - name: Install system dependencies
+        if: steps.cache-quiche.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev pkg-config
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        if: steps.cache-quiche.outputs.cache-hit != 'true'
+
+      - name: Build quiche
+        if: steps.cache-quiche.outputs.cache-hit != 'true'
+        run: git clone --recursive https://github.com/cloudflare/quiche --branch "$QUICHE_VERSION" quiche-build && cd quiche-build && cargo build --release --features ffi
+
+      - name: Upload quiche build
+        uses: actions/upload-artifact@v7
+        with:
+          name: quiche-build
+          path: |
+            quiche-build/target/release/libquiche.so
+            quiche-build/quiche/include/quiche.h
+
+  pocketmine:
+    name: Build PocketMine-MP.phar
+    needs: changes
+    runs-on: ubuntu-latest
+    if: "github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.build_base == 'true'"
+    steps:
+      - name: Checkout PocketMine-MP
+        uses: actions/checkout@v7
+        with:
+          repository: NetherGamesMC/PocketMine-MP
+          token: ${{ secrets.ng_token }}
+          submodules: true
+          path: PocketMine-MP
+
+      - name: Cache PHP Release
+        id: cache-php
+        uses: actions/cache@v6
+        with:
+          path: bin
+          key: php-8.4-pm5-linux-x86_64-v1
+
+      - name: Download PHP Release
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          file: PHP-8.4-Linux-x86_64-PM5.tar.gz
+          repo: NetherGamesMC/php-build-scripts
+          version: "tags/pm5-php-8.4-latest"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Unpack PHP Release
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        run: |
+          tar -xzvf PHP-8.4-Linux-x86_64-PM5.tar.gz
+          rm -f PHP-8.4-Linux-x86_64-PM5.tar.gz
+
+      - name: Cache PocketMine-MP vendor
+        id: cache-vendor
+        uses: actions/cache@v6
+        with:
+          path: PocketMine-MP/vendor
+          key: vendor-pocketmine-${{ hashFiles('PocketMine-MP/composer.json', 'PocketMine-MP/composer.lock') }}
+
+      - name: Cache Composer metadata & repo cache
+        if: steps.cache-vendor.outputs.cache-hit != 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/composer
+          key: composer-cache-${{ runner.os }}-${{ hashFiles('PocketMine-MP/composer.json') }}
+          restore-keys: |
+            composer-cache-${{ runner.os }}-
+            composer-cache-
+
+      - name: Cache Composer Phar
+        id: cache-composer-phar
+        if: steps.cache-vendor.outputs.cache-hit != 'true'
+        uses: actions/cache@v6
+        with:
+          path: composer.phar
+          key: composer-stable-phar-v1
+
+      - name: Download Composer
+        if: steps.cache-vendor.outputs.cache-hit != 'true' && steps.cache-composer-phar.outputs.cache-hit != 'true'
+        run: curl -o ./composer.phar "https://getcomposer.org/composer-stable.phar"
+
+      - name: Install Composer dependencies
+        if: steps.cache-vendor.outputs.cache-hit != 'true'
+        working-directory: PocketMine-MP
+        run: ../bin/php7/bin/php ../composer.phar install --classmap-authoritative --no-dev --prefer-dist --no-interaction --no-progress
+
+      - name: Resolve PocketMine-MP revision
+        id: pocketmine-rev
+        working-directory: PocketMine-MP
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build server phar
+        working-directory: PocketMine-MP
+        run: ../bin/php7/bin/php -dphar.readonly=0 ./build/server-phar.php --git ${{ steps.pocketmine-rev.outputs.sha }}
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: PocketMine-MP
+          path: PocketMine-MP/PocketMine-MP.phar
+
+  vanillagenerator:
+    name: Build VanillaGenerator.phar
+    needs: changes
+    runs-on: ubuntu-latest
+    if: "github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.build_uhc == 'true'"
+    steps:
+      - name: Checkout VanillaGenerator
+        uses: actions/checkout@v7
+        with:
+          repository: NetherGamesMC/VanillaGenerator
+          token: ${{ secrets.ng_token }}
+          path: VanillaGenerator
+
+      - name: Cache PHP Release
+        id: cache-php
+        uses: actions/cache@v6
+        with:
+          path: bin
+          key: php-8.4-pm5-linux-x86_64-v1
+
+      - name: Download PHP Release
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          file: PHP-8.4-Linux-x86_64-PM5.tar.gz
+          repo: NetherGamesMC/php-build-scripts
+          version: "tags/pm5-php-8.4-latest"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Unpack PHP Release
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        run: |
+          tar -xzvf PHP-8.4-Linux-x86_64-PM5.tar.gz
+          rm -f PHP-8.4-Linux-x86_64-PM5.tar.gz
+
+      - name: Cache pharbuilder-rs
+        id: cache-pharbuilder
+        uses: actions/cache@v6
+        with:
+          path: pharbuilder
+          key: pharbuilder-rs-binary-v1
+
+      - name: Download pharbuilder-rs
+        if: steps.cache-pharbuilder.outputs.cache-hit != 'true'
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          file: pharbuilder
+          repo: NetherGamesMC/pharbuilder-rs
+          token: ${{ secrets.ng_token }}
+
+      - name: Build
+        run: |
+          chmod +x pharbuilder
+          ./pharbuilder -i ./VanillaGenerator -o ./VanillaGenerator.phar
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: VanillaGenerator
+          path: VanillaGenerator.phar
+
+  base:
+    name: Build & push base image
+    needs: [changes, quiche, pocketmine]
+    runs-on: ubuntu-latest
+    if: "github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.build_base == 'true'"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Cache PHP Release
+        id: cache-php
+        uses: actions/cache@v6
+        with:
+          path: bin
+          key: php-8.4-pm5-linux-x86_64-v1
+
+      - name: Download PHP Release
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        uses: dsaltares/fetch-gh-release-asset@1.1.2
+        with:
+          file: PHP-8.4-Linux-x86_64-PM5.tar.gz
+          repo: NetherGamesMC/php-build-scripts
+          version: "tags/pm5-php-8.4-latest"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Unpack PHP Release
+        if: steps.cache-php.outputs.cache-hit != 'true'
+        run: |
+          tar -xzvf PHP-8.4-Linux-x86_64-PM5.tar.gz
+          rm -f PHP-8.4-Linux-x86_64-PM5.tar.gz
+
+      - name: Download quiche build
+        uses: actions/download-artifact@v8
+        with:
+          name: quiche-build
+          path: quiche-build-download
+
+      - name: Lay out quiche build
+        run: |
+          mkdir -p quiche-build/target/release quiche-build/quiche/include
+          cp quiche-build-download/target/release/libquiche.so quiche-build/target/release/libquiche.so
+          cp quiche-build-download/quiche/include/quiche.h quiche-build/quiche/include/quiche.h
+
+      - name: Download PocketMine-MP.phar
+        uses: actions/download-artifact@v8
+        with:
+          name: PocketMine-MP
+          path: .
+
+      - name: Download NGEssentials.phar
+        uses: actions/download-artifact@v8
+        with:
+          name: NGEssentials
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: .
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v4.6.0
+        with:
+          username: ${{ secrets.docker_username }}
+          password: ${{ secrets.docker_password }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: "nethergamesmc/servers:base"
+
+  game:
+    name: Build & push ${{ matrix.tag }} image
+    needs: [changes, base]
+    runs-on: ubuntu-latest
+    if: "always() && github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.matrix != '{\"include\":[]}' && (needs.base.result == 'success' || needs.base.result == 'skipped')"
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Checkout assets
+        uses: actions/checkout@v7
+        with:
+          repository: NetherGamesMC/assets
+          token: ${{ secrets.ng_token }}
+          path: assets
+
+      - name: Download ${{ matrix.phar }}
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.artifact }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: .
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v4.6.0
+        with:
+          username: ${{ secrets.docker_username }}
+          password: ${{ secrets.docker_password }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./${{ matrix.plugin }}/Dockerfile
+          push: true
+          tags: "nethergamesmc/servers:${{ matrix.tag }}"
+          build-args: "BUILD_FROM=nethergamesmc/servers:base"
+
+  game-uhc:
+    name: Build & push uhc image
+    needs: [changes, base, vanillagenerator]
+    runs-on: ubuntu-latest
+    if: "always() && github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.build_uhc == 'true' && (needs.base.result == 'success' || needs.base.result == 'skipped') && (needs.vanillagenerator.result == 'success' || needs.vanillagenerator.result == 'skipped')"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Checkout assets
+        uses: actions/checkout@v7
+        with:
+          repository: NetherGamesMC/assets
+          token: ${{ secrets.ng_token }}
+          path: assets
+
+      - name: Download xUHC.phar
+        uses: actions/download-artifact@v8
+        with:
+          name: xUHC
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: .
+
+      - name: Download VanillaGenerator.phar
+        uses: actions/download-artifact@v8
+        with:
+          name: VanillaGenerator
+          path: .
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v4.6.0
+        with:
+          username: ${{ secrets.docker_username }}
+          password: ${{ secrets.docker_password }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./UHC/Dockerfile
+          push: true
+          tags: "nethergamesmc/servers:uhc"
+          build-args: "BUILD_FROM=nethergamesmc/servers:base"

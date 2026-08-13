@@ -1,0 +1,103 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Cannot access offset ''etag'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: s3/task/S3ConnectorTask.php
+
+		-
+			message: '#^Cannot access offset ''x\-amz\-request\-id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: s3/task/S3ConnectorTask.php
+
+		-
+			message: '#^Parameter \#1 \$string of function substr expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: s3/task/S3ConnectorTask.php
+
+		-
+			message: '#^Binary operation "\." between ''Connection failed, '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: s3/task/S3GetObjectTask.php
+
+		-
+			message: '#^Binary operation "\." between ''Connection failed, '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: s3/task/S3ObjectBulkDeleteTask.php
+
+		-
+			message: '#^Cannot access property \$nodeValue on mixed\.$#'
+			identifier: property.nonObject
+			count: 9
+			path: s3/task/S3ObjectBulkDeleteTask.php
+
+		-
+			message: '#^Parameter \#1 \$key of class libasyncio\\s3\\response\\Error constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: s3/task/S3ObjectBulkDeleteTask.php
+
+		-
+			message: '#^Parameter \#1 \$objectKey of class libasyncio\\s3\\response\\S3DeletedObject constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: s3/task/S3ObjectBulkDeleteTask.php
+
+		-
+			message: '#^Parameter \#2 \$code of class libasyncio\\s3\\response\\Error constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: s3/task/S3ObjectBulkDeleteTask.php
+
+		-
+			message: '#^Parameter \#2 \$versionId of class libasyncio\\s3\\response\\S3DeletedObject constructor expects string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: s3/task/S3ObjectBulkDeleteTask.php
+
+		-
+			message: '#^Parameter \#3 \$message of class libasyncio\\s3\\response\\Error constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: s3/task/S3ObjectBulkDeleteTask.php
+
+		-
+			message: '#^Parameter \#4 \$deleteMarkerVersionId of class libasyncio\\s3\\response\\S3DeletedObject constructor expects string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: s3/task/S3ObjectBulkDeleteTask.php
+
+		-
+			message: '#^Parameter \#4 \$versionId of class libasyncio\\s3\\response\\Error constructor expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: s3/task/S3ObjectBulkDeleteTask.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>nodeValue" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: s3/task/S3ObjectBulkDeleteTask.php
+
+		-
+			message: '#^Binary operation "\." between ''Connection failed, '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: s3/task/S3ObjectVersionsTask.php
+
+		-
+			message: '#^Binary operation "\." between ''Connection failed, '' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: s3/task/S3UploadObjectTask.php
+
+		-
+			message: '#^Method libasyncio\\s3\\utils\\Internet\:\:putURL\(\) has parameter \$err with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: s3/utils/Internet.php

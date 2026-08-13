@@ -1,0 +1,91 @@
+{
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../libraries/libDiscord",
+      "options": {
+        "versions": {
+          "nethergamesmc/libdiscord": "dev-stable"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../libraries/libPhysX",
+      "options": {
+        "versions": {
+          "nethergamesmc/libphysx": "dev-master"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../libraries/libReplay",
+      "options": {
+        "versions": {
+          "nethergamesmc/libreplay": "dev-stable"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../libraries/libVanilla",
+      "options": {
+        "versions": {
+          "nethergamesmc/libvanilla": "dev-stable"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../libraries/libasyncio",
+      "options": {
+        "versions": {
+          "nethergamesmc/libasyncio": "dev-stable"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../libraries/libforms",
+      "options": {
+        "versions": {
+          "nethergamesmc/libforms": "dev-stable"
+        }
+      }
+    },
+    {
+      "type": "path",
+      "url": "../libraries/libminigames",
+      "options": {
+        "versions": {
+          "nethergamesmc/libminigames": "dev-stable"
+        }
+      }
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/NetherGamesMC/PocketMine-MP.git"
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/NetherGamesMC/libasynql.git"
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/NetherGamesMC/libasynCurl.git"
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/NetherGamesMC/InvMenu.git"
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/NetherGamesMC/PHP-Quiche.git"
+    },
+    {
+      "type": "vcs",
+      "url": "https://github.com/NetherGamesMC/libproxy.git"
+    }
+  ]
+}

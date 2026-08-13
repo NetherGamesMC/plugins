@@ -1,0 +1,19 @@
+{
+  "name": "nethergamesmc/libphysx",
+  "description": "An PhysX library for PocketMine-MP",
+  "license": "proprietary",
+  "type": "project",
+  "require": {
+    "php": "^8.0"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "2.1.29",
+    "nethergamesmc/pocketmine-mp": "dev-stable"
+  },
+  "autoload": {
+    "psr-4": {
+      "libPhysX\\": "/"
+    }
+  },
+  "minimum-stability": "dev"
+}
