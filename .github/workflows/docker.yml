@@ -382,7 +382,7 @@ jobs:
           rm -f PHP-8.4-Linux-x86_64-PM5.tar.gz
 
       - name: Download quiche build
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: quiche-build
           path: quiche-build-download
@@ -394,13 +394,13 @@ jobs:
           cp quiche-build-download/quiche/include/quiche.h quiche-build/quiche/include/quiche.h
 
       - name: Download PocketMine-MP.phar
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: PocketMine-MP
           path: .
 
       - name: Download NGEssentials.phar
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: NGEssentials
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -417,7 +417,7 @@ jobs:
           password: ${{ secrets.docker_password }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
@@ -448,7 +448,7 @@ jobs:
           path: assets
 
       - name: Download ${{ matrix.phar }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.artifact }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -465,7 +465,7 @@ jobs:
           password: ${{ secrets.docker_password }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./${{ matrix.plugin }}/Dockerfile
@@ -492,7 +492,7 @@ jobs:
           path: assets
 
       - name: Download xUHC.phar
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: xUHC
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -500,7 +500,7 @@ jobs:
           path: .
 
       - name: Download VanillaGenerator.phar
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: VanillaGenerator
           path: .
@@ -515,7 +515,7 @@ jobs:
           password: ${{ secrets.docker_password }}
 
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./UHC/Dockerfile
