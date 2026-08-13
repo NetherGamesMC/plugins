@@ -1,0 +1,45 @@
+<?php
+/**
+ *   _ _ _ __      __         _ _ _
+ *  | (_) |\ \    / /        (_) | |
+ *  | |_| |_\ \  / /_ _ _ __  _| | | __ _
+ *  | | | '_ \ \/ / _` | '_ \| | | |/ _` |
+ *  | | | |_) \  / (_| | | | | | | | (_| |
+ *  |_|_|_.__/ \/ \__,_|_| |_|_|_|_|\__,_|
+ *
+ * Copyright (C) 2016-2026 NetherGames Network
+ *
+ * This is private software, you cannot redistribute and/or modify it in any way
+ * unless given explicit permission to do so. If you have not been given explicit
+ * permission to view or modify this software you should take the appropriate actions
+ * to remove this software from your device immediately.
+ *
+ * @author CortexPE
+ *
+ */
+declare(strict_types=1);
+
+namespace libVanilla\entity\ai\navigator\dumper;
+
+use pocketmine\math\Vector3;
+use pocketmine\world\particle\Particle;
+use pocketmine\world\World;
+
+final class ParticleNodeDumper implements NodeDumper, PathDumper
+{
+    public function __construct(private Particle $particle)
+    {
+    }
+
+    public function showNode(World $world, Vector3 $node): void
+    {
+        $world->addParticle($node, $this->particle);
+    }
+
+    public function showPath(World $world, array $path): void
+    {
+        foreach ($path as $node) {
+            $world->addParticle($node, $this->particle);
+        }
+    }
+}

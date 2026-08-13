@@ -1,0 +1,13 @@
+name: xBedwars
+main: bedwars\Bedwars
+authors:
+  - matcracker
+  - driesboy
+  - cooldogedev
+version: 2.21
+api: [ 5.0.0 ]
+depend: NGEssentials
+permissions:
+  nethergames.bw.admin:
+    description: Allows to create/edit BW game
+    default: op

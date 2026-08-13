@@ -1,0 +1,6 @@
+name: xSurvivalGames
+main: survivalgames\SurvivalGames
+authors: [larryTheCoder]
+version: 1.0.2
+api: [5.0.0]
+depend: [NGEssentials]

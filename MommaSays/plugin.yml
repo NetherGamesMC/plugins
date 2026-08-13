@@ -1,0 +1,8 @@
+name: xMommaSays
+main: mommasays\MommaSays
+authors: [matcracker, Driesboy, josewowgame, TobiasDev, k3ithos]
+version: 2.1.1
+api: [5.0.0]
+load: POSTWORLD
+depend:
+  - NGEssentials

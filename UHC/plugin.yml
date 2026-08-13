@@ -1,0 +1,7 @@
+name: xUHC
+author: Drew
+main: uhc\UHC
+version: 1.0.0
+api: 5.0.0
+depend:
+  - NGEssentials

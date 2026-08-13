@@ -1,0 +1,12 @@
+parameters:
+  ignoreErrors:
+    - identifier: missingType.iterableValue
+    - identifier: binaryOp.invalid
+    - identifier: offsetAccess.nonOffsetAccessible
+  level: max
+  paths:
+    - .
+  excludePaths:
+    analyse:
+      - bin (?)
+      - vendor

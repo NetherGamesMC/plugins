@@ -1,0 +1,11 @@
+name: xMeltdown
+main: meltdown\Meltdown
+authors: [ AlicanCopur ]
+version: 0.1
+api: [ 5.0.0 ]
+depend: NGEssentials
+
+permissions:
+  nethergames.md.admin:
+    description: Allows creating/editing a Meltdown game
+    default: op

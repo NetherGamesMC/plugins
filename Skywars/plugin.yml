@@ -1,0 +1,11 @@
+name: xSkywars
+main: skywars\Skywars
+author: [ matcracker, Driesboy ]
+version: 4.0
+api: [ 5.0.0 ]
+depend: NGEssentials
+
+permissions:
+  nethergames.sw.admin:
+    description: Allows to create/edit SW game
+    default: op

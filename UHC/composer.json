@@ -1,0 +1,28 @@
+{
+  "name": "nethergamesmc/uhc",
+  "description": "A UHC plugin for PocketMine-MP",
+  "license": "proprietary",
+  "type": "project",
+  "require": {
+    "php": "^8.2",
+    "ext-sockets": "*",
+    "ext-pmmpthread": "^6.0.1"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "2.1.31",
+    "nethergamesmc/pocketmine-mp": "dev-stable",
+    "nethergamesmc/ngessentials": "dev-stable"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../NGEssentials",
+      "options": {
+        "versions": {
+          "nethergamesmc/ngessentials": "dev-stable"
+        }
+      }
+    }
+  ],
+  "minimum-stability": "dev"
+}

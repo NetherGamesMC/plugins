@@ -1,0 +1,11 @@
+parameters:
+  ignoreErrors:
+    - identifier: missingType.iterableValue
+    - identifier: missingType.generics
+  level: 6
+  paths:
+    - src
+  scanDirectories:
+    - vendor
+includes:
+  - phpstan-baseline.neon

@@ -1,0 +1,79 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Method libminigames\\loot\\LootPool\:\:roll\(\) should return array\<pocketmine\\item\\Item\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: loot/LootPool.php
+
+		-
+			message: '#^Method libminigames\\loot\\LootTable\:\:roll\(\) should return array\<pocketmine\\item\\Item\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: loot/LootTable.php
+
+		-
+			message: '#^Cannot use array destructuring on mixed\.$#'
+			identifier: offsetAccess.nonArray
+			count: 1
+			path: pool/WeightedPool.php
+
+		-
+			message: '#^Method libminigames\\settings\\GameSettings\:\:fetchFromPlayer\(\) has ReflectionException in PHPDoc @throws tag but it''s not thrown\.$#'
+			identifier: throws.unusedType
+			count: 1
+			path: settings/GameSettings.php
+
+		-
+			message: '#^Parameter \#1 \$callback of function array_map expects \(callable\(ReflectionIntersectionType\|ReflectionNamedType\)\: mixed\)\|null, Closure\(ReflectionNamedType\)\: string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: settings/SettingsHolder.php
+
+		-
+			message: '#^Call to function is_int\(\) with int will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: settings/components/Dropdown.php
+
+		-
+			message: '#^Possibly invalid array key type mixed\.$#'
+			identifier: offsetAccess.invalidOffset
+			count: 2
+			path: settings/components/Dropdown.php
+
+		-
+			message: '#^Parameter \#1 \$value of function strval expects bool\|float\|int\|resource\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: settings/components/Input.php
+
+		-
+			message: '#^Call to function is_int\(\) with int will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: settings/components/StepSlider.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: settings/components/StepSlider.php
+
+		-
+			message: '#^Possibly invalid array key type mixed\.$#'
+			identifier: offsetAccess.invalidOffset
+			count: 2
+			path: settings/components/StepSlider.php
+
+		-
+			message: '#^Binary operation "\." between mixed and ''/v1/leaderboard…'' results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: utils/LeaderboardData.php
+
+		-
+			message: '#^Parameter \#1 \$row of static method libminigames\\utils\\streaks\\Streak\:\:FromSQL\(\) expects array\<string\>, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: utils/Streaks.php

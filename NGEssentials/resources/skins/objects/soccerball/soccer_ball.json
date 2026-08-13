@@ -1,0 +1,32 @@
+{
+	"format_version": "1.10.0",
+	"geometry.object.soccer_ball": {
+		"texturewidth": 64,
+		"textureheight": 64,
+		"visible_bounds_width": 2,
+		"visible_bounds_height": 1,
+		"visible_bounds_offset": [0, 0, 0],
+		"bones": [
+			{
+				"name": "head",
+				"pivot": [0, 5, 0],
+				"cubes": [
+					{"origin": [-4, 1, -5], "size": [8, 8, 2], "uv": [22, 0]},
+					{"origin": [4, 3, -5], "size": [1, 4, 1], "uv": [3, 4]},
+					{"origin": [-5, 3, -5], "size": [1, 4, 1], "uv": [3, 4], "mirror": true},
+					{"origin": [4, 3, 4], "size": [1, 4, 1], "uv": [0, 0]},
+					{"origin": [-5, 3, 4], "size": [1, 4, 1], "uv": [0, 0], "mirror": true},
+					{"origin": [-4, 1, 3], "size": [8, 8, 2], "uv": [18, 22]},
+					{"origin": [-3, 9, -5], "size": [6, 1, 10], "uv": [0, 11]},
+					{"origin": [-3, 0, -5], "size": [6, 1, 10], "uv": [0, 0]},
+					{"origin": [4, 1, -4], "size": [1, 8, 8], "uv": [0, 22]},
+					{"origin": [-5, 1, -4], "size": [1, 8, 8], "uv": [0, 22], "mirror": true},
+					{"origin": [3, 9, -3], "size": [2, 1, 6], "uv": [22, 11]},
+					{"origin": [-5, 9, -3], "size": [2, 1, 6], "uv": [22, 11], "mirror": true},
+					{"origin": [3, 0, -3], "size": [2, 1, 6], "uv": [12, 32]},
+					{"origin": [-5, 0, -3], "size": [2, 1, 6], "uv": [12, 32], "mirror": true}
+				]
+			}
+		]
+	}
+}

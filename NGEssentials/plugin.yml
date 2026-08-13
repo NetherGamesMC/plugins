@@ -1,0 +1,102 @@
+name: NGEssentials
+version: 2.42
+main: NetherGames\NGEssentials\NGEssentials
+api: [ 5.0.0 ]
+authors: [ k3ithos, matcracker, driesboy ]
+load: POSTWORLD
+softdepend:
+  - DEVirion
+permissions:
+  nethergames.executive:
+    default: false
+    description: "Permission identifier for executive staff members"
+  nethergames.game_designer:
+    default: false
+    description: "Permission identifier for game designers"
+  nethergames.developer:
+    default: false
+    description: "Permission identifier for developers"
+  nethergames.media:
+    default: false
+    description: "Permission identifier for media"
+  nethergames.director:
+    default: false
+    description: "Permission identifier for directors"
+  nethergames.advisor:
+    default: false
+    description: "Permission identifier for executive advisors"
+  nethergames.voter:
+    default: false
+    description: "Allows players to access voting features"
+  nethergames.supervisor:
+    default: false
+    description: "Permission identifier for supervisors"
+  nethergames.mod:
+    default: false
+    description: "Permission identifier for mod"
+  nethergames.trainee:
+    default: false
+    description: "Permission identifier for trainees"
+  nethergames.staff:
+    default: false
+    description: "Permission identifier for staff members"
+  nethergames.trainee_builder:
+    default: false
+    description: "Permission identifier for trainee builders"
+  nethergames.builder:
+    default: false
+    description: "Permission identifier for builders"
+  nethergames.discord:
+    default: false
+    description: "Permission identifier for discord moderators"
+  nethergames.artist:
+    default: false
+    description: "Permission identifier for artists"
+  nethergames.tester:
+    default: false
+    description: "Permission identifier for testers"
+  nethergames.vip.ultra:
+    default: false
+    description: "Permission identifier for Ultra players"
+  nethergames.vip.emerald:
+    default: false
+    description: "Permission identifier for Emerald players"
+  nethergames.vip.legend:
+    default: false
+    description: "Permission identifier for Legend players"
+  nethergames.vip.titan:
+    default: false
+    description: "Permission identifier for Titan players"
+  nethergames.yt:
+    default: false
+    description: "Permission identifier for YT players"
+  nethergames.youtube:
+    default: false
+    description: "Permission identifier for YouTuber players"
+  nethergames.partner:
+    default: false
+    description: "Permission identifier for Partner players"
+  nethergames.tier.silver:
+    default: false
+    description: "Permission identifier for Silver tier"
+  nethergames.tier.gold:
+    default: false
+    description: "Permission identifier for Gold tier"
+  nethergames.tier.guardian:
+    default: false
+    description: "Permission identifier for Guardian tier"
+  nethergames.tier.eagle:
+    default: false
+    description: "Permission identifier for Eagle tier"
+  nethergames.tier.elite:
+    default: false
+    description: "Permission identifier for Elite tier"
+  nethergames.perk.nick.custom:
+    default: false
+    description: "Permission identifier for custom nicking perk"
+  nethergames.perk.nick.random:
+    default: false
+    description: "Permission identifier for random nicking perk"
+  nethergames.player:
+    default: true
+    description: "Permission identifier for all players"

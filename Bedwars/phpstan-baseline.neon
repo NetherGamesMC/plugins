@@ -1,0 +1,49 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Method bedwars\\BWArena\:\:getStreaksKey\(\) never returns null so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: src/bedwars/BWArena.php
+
+		-
+			message: '#^Cannot call method getTypeId\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: src/bedwars/BWArenaListener.php
+
+		-
+			message: '#^Binary operation "\." between non\-falsy\-string and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: src/bedwars/BWTeam.php
+
+		-
+			message: '#^Trying to invoke \(Closure\(pocketmine\\item\\Item, pocketmine\\player\\Player, bedwars\\BWTeam\)\: void\)\|null but it might not be a callable\.$#'
+			identifier: callable.nonCallable
+			count: 1
+			path: src/bedwars/shops/ShopItem.php
+
+		-
+			message: '#^Method bedwars\\shops\\Upgrade\:\:handlePurchase\(\) never returns string so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: src/bedwars/shops/Upgrade.php
+
+		-
+			message: '#^Call to function is_a\(\) with arguments class\-string\<pocketmine\\nbt\\tag\\Tag\>, ''pocketmine\\\\nbt\\\\tag\\\\Tag'' and true will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/bedwars/utils/Utils.php
+
+		-
+			message: '#^Cannot unset property bedwars\\utils\\entity\\mob\\BaseMob\:\:\$team because it might have hooks in a subclass\.$#'
+			identifier: unset.possiblyHookedProperty
+			count: 1
+			path: src/bedwars/utils/entity/mob/BaseMob.php
+
+		-
+			message: '#^Property pocketmine\\world\\Explosion\:\:\$affectedBlocks \(array\<int, pocketmine\\block\\Block\>\) does not accept array\<pocketmine\\block\\Block\>\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: src/bedwars/utils/world/Explosion.php
