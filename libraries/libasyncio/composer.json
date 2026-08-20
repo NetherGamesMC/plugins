@@ -5,8 +5,12 @@
   "type": "project",
   "version": "dev-stable",
   "require": {
-    "php": "^8.0",
+    "php": "^8.1",
     "ext-igbinary": "*"
+  },
+  "suggest": {
+    "ext-zstd": "Required for ZSTD compression format",
+    "ext-libdeflate": "Faster DEFLATE compression"
   },
   "require-dev": {
     "phpstan/phpstan": "2.1.29",

@@ -24,23 +24,23 @@ declare(strict_types=1);
 namespace libasyncio;
 
 use GlobalLogger;
+use libasyncio\compression\Compression;
+use libasyncio\compression\CompressionFormat;
+use libasyncio\compression\Compressor;
 use Phar;
 use PharData;
 use pocketmine\utils\Filesystem;
 use RuntimeException;
 use Throwable;
 use function is_dir;
+use function is_file;
 use function mkdir;
-use function sprintf;
+use function str_ends_with;
 
-class ZstdRecursiveCompressor
+class RecursiveCompressor
 {
 
-    /** @var int */
-    public const COMPRESSION_LEVEL = ZSTD_COMPRESS_LEVEL_MAX;
-
     public const ARCHIVE_FORMAT = 'tar';
-    public const COMPRESSION_FORMAT = 'ngzstd';
 
     /**
      * Compress a directory.
@@ -48,22 +48,18 @@ class ZstdRecursiveCompressor
      * like path. It's important you don't
      * use a file name for it.
      *
-     * Output format is COMPRESSION_FORMAT.
+     * Output format is the chosen compression format.
      *
      * @param string $input
      * @param string $output
-     * @param int $compressionLevel
+     * @param int|null $compressionLevel
+     * @param CompressionFormat|null $format
      *
      * @return bool
      */
-    public static function compress(string $input, string $output, int $compressionLevel = self::COMPRESSION_LEVEL): bool
+    public static function compress(string $input, string $output, ?int $compressionLevel = null, ?CompressionFormat $format = null): bool
     {
-        if ($compressionLevel < ZSTD_COMPRESS_LEVEL_MIN || $compressionLevel > ZSTD_COMPRESS_LEVEL_MAX) {
-            throw new RuntimeException(
-                'Compression level must cannot either lower than ' . ZSTD_COMPRESS_LEVEL_MIN .
-                ' or higher than ' . ZSTD_COMPRESS_LEVEL_MAX . ', ' . $compressionLevel . ' given'
-            );
-        }
+        $compressor = self::resolveCompressor($format);
 
         $archive = new PharData($input . '.' . self::ARCHIVE_FORMAT);
         $archive->buildFromDirectory($input);
@@ -73,12 +69,9 @@ class ZstdRecursiveCompressor
             throw new RuntimeException('Archive unreadable');
         }
 
-        $compressedData = zstd_compress($data, $compressionLevel);
-        if (!is_string($compressedData)) {
-            throw new RuntimeException('Compression failed');
-        }
+        $compressedData = $compressor->compress($data, $compressionLevel);
 
-        Filesystem::safeFilePutContents($output . '.' . self::COMPRESSION_FORMAT, $compressedData);
+        Filesystem::safeFilePutContents($output . '.' . $compressor->getFormat()->getFileExtension(), $compressedData);
 
         unset($archive);
         Phar::unlinkArchive($input . '.' . self::ARCHIVE_FORMAT);
@@ -91,20 +84,27 @@ class ZstdRecursiveCompressor
      * like path. It's important you don't
      * use a file name for it.
      *
-     * Input format is COMPRESSION_FORMAT.
+     * Input format is the chosen compression format.
      * Output format is regular directory.
      *
      * @param string $input
      * @param string $output
+     * @param CompressionFormat|null $format
      *
      * @return bool
      */
-    public static function uncompress(string $input, string $output): bool
+    public static function uncompress(string $input, string $output, ?CompressionFormat $format = null): bool
     {
-        $input .= '.' . self::COMPRESSION_FORMAT;
+        $compressor = self::resolveCompressor($format, $input);
+
+        $extension = $compressor->getFormat()->getFileExtension();
+        if (!str_ends_with($input, '.' . $extension)) {
+            $input .= '.' . $extension;
+        }
+
         if (!is_file($input)) {
             throw new RuntimeException(
-                'That file is not of type ' . self::COMPRESSION_FORMAT . ', cannot uncompress'
+                'That file is not of type ' . $extension . ', cannot uncompress'
             );
         }
 
@@ -113,17 +113,14 @@ class ZstdRecursiveCompressor
             throw new RuntimeException('Compressed file unreadable');
         }
 
-        $data = zstd_uncompress($compressedData);
-        if (!is_string($data)) {
-            throw new RuntimeException('Uncompression failed.');
-        }
+        $data = $compressor->decompress($compressedData);
 
         Filesystem::safeFilePutContents($output . '.' . self::ARCHIVE_FORMAT, $data);
         $archive = new PharData($output . '.' . self::ARCHIVE_FORMAT);
 
         try {
             if (!is_dir($output) && !mkdir($output)) {
-                throw new RuntimeException(sprintf('Directory "%s" was not created', $output));
+                throw new RuntimeException('Directory "' . $output . '" was not created');
             }
         } catch (Throwable $exception) {
             GlobalLogger::get()->critical("Unhandled exception from a method that should never throw anything.");
@@ -137,5 +134,20 @@ class ZstdRecursiveCompressor
         PharData::unlinkArchive($output . '.' . self::ARCHIVE_FORMAT);
 
         return true;
+    }
+
+    /**
+     * @param CompressionFormat|null $format
+     * @param string|null $path
+     *
+     * @return Compressor
+     */
+    private static function resolveCompressor(?CompressionFormat $format, ?string $path = null): Compressor
+    {
+        if ($format !== null) {
+            return Compression::get($format);
+        }
+
+        return $path !== null ? Compression::fromPath($path) : Compression::auto();
     }
 }
