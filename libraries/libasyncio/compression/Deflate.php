@@ -80,6 +80,10 @@ class Deflate implements Compressor
     public function decompress(string $data): string
     {
         $context = inflate_init(ZLIB_ENCODING_RAW);
+        if ($context === false) {
+            throw new RuntimeException('Failed to initialize inflate context');
+        }
+
         $result = inflate_add($context, $data, ZLIB_FINISH);
         if (!is_string($result)) {
             throw new RuntimeException('Uncompression failed');
