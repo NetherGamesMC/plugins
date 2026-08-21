@@ -23,10 +23,12 @@ declare(strict_types=1);
 
 namespace libasyncio;
 
+use GlobalLogger;
 use InvalidArgumentException;
 use libasyncio\compression\CompressionFormat;
 use libasyncio\compression\Compressor;
 use pocketmine\Server;
+use RuntimeException;
 use function str_ends_with;
 
 class FileOrDirectoryUncompressTask extends FileOperationTask
@@ -65,7 +67,13 @@ class FileOrDirectoryUncompressTask extends FileOperationTask
     public function onRun(): void
     {
         parent::onRun();
-        $this->setSuccess(RecursiveCompressor::uncompress($this->input, $this->output, $this->compressor->getFormat()));
+        try {
+            $this->setSuccess(RecursiveCompressor::uncompress($this->input, $this->output, $this->compressor->getFormat()));
+        } catch (RuntimeException $e) {
+            GlobalLogger::get()->critical("Uncompression failed for {$this->input}: " . $e->getMessage());
+            GlobalLogger::get()->logException($e);
+            $this->setSuccess(false);
+        }
     }
 
     protected function checkSuccess(): void
