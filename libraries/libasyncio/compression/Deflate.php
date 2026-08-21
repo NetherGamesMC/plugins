@@ -65,6 +65,11 @@ class Deflate implements Compressor
             return libdeflate_deflate_compress($data, $level);
         }
 
+        // Fallback to core zlib when ext-libdeflate is not available.
+        // pmmp/ext-libdeflate only exposes compression bindings and may not be
+        // installed; zlib_encode with ZLIB_ENCODING_RAW produces compatible
+        // raw DEFLATE output. Level is clamped to 9 as zlib supports 0-9
+        // while libdeflate supports 0-12.
         $result = zlib_encode($data, ZLIB_ENCODING_RAW, $level > 9 ? 9 : $level);
         if (!is_string($result)) {
             throw new RuntimeException('Compression failed');

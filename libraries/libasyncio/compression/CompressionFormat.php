@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace libasyncio\compression;
 
+use function extension_loaded;
 use function str_ends_with;
 
 enum CompressionFormat
@@ -47,16 +48,16 @@ enum CompressionFormat
     }
 
     /**
-     * Name of the PHP extension required, or null when self-contained via core zlib.
+     * Whether this format is compatible and can be used.
      *
-     * @return string|null
+     * @return bool
      */
-    public function getRequiredPHPExtension(): ?string
+    public function isCompatible(): bool
     {
         return match ($this) {
-            self::ZSTD => 'zstd',
-            self::DEFLATE => null,
-            self::GZIP => null,
+            self::ZSTD => extension_loaded('zstd'),
+            self::DEFLATE => extension_loaded('libdeflate') || extension_loaded('zlib'),
+            self::GZIP => extension_loaded('zlib'),
         };
     }
 

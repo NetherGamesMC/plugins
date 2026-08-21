@@ -35,11 +35,8 @@ final class Compression
      */
     public static function get(CompressionFormat $format): Compressor
     {
-        $required = $format->getRequiredPHPExtension();
-        if ($required !== null && !extension_loaded($required)) {
-            throw new InvalidArgumentException(
-                'Compression format ' . $format->name . ' requires the "' . $required . '" extension, which is not loaded'
-            );
+        if (!$format->isCompatible()) {
+            throw new InvalidArgumentException('Compression format ' . $format->name . ' is not compatible');
         }
 
         return match ($format) {
