@@ -23,7 +23,12 @@ declare(strict_types=1);
 
 namespace libasyncio;
 
+use GlobalLogger;
+use InvalidArgumentException;
+use libasyncio\compression\CompressionFormat;
+use libasyncio\compression\Compressor;
 use pocketmine\Server;
+use RuntimeException;
 
 class FileOrDirectoryCompressTask extends FileOperationTask
 {
@@ -31,9 +36,11 @@ class FileOrDirectoryCompressTask extends FileOperationTask
     /** @var string */
     private string $input;
     /** @var string */
-    private $output;
-    /** @var int */
-    private $compressionLevel;
+    private string $output;
+    /** @var int|null */
+    private ?int $compressionLevel;
+    /** @var Compressor */
+    private Compressor $compressor;
 
     /**
      * FileOrDirectoryCompressTask constructor.
@@ -41,12 +48,18 @@ class FileOrDirectoryCompressTask extends FileOperationTask
      * @param string $input
      * @param string $output
      * @param callable $callable
-     * @param int $compressionLevel
+     * @param int|null $compressionLevel
+     * @param CompressionFormat|null $format
      */
-    public function __construct(string $input, string $output, callable $callable, int $compressionLevel = ZstdRecursiveCompressor::COMPRESSION_LEVEL)
+    public function __construct(string $input, string $output, callable $callable, ?int $compressionLevel = null, ?CompressionFormat $format = null)
     {
+        if ($format !== null && !$format->isCompatible()) {
+            throw new InvalidArgumentException('Compression format ' . $format->name . ' is not compatible');
+        }
+
+        $this->compressor = ($format ?? CompressionFormat::auto())->getCompressor();
         $this->input = $input;
-        $this->output = str_replace('.' . ZstdRecursiveCompressor::COMPRESSION_FORMAT, '', $output);
+        $this->output = ($outputFormat = CompressionFormat::fromPath($output)) !== null ? substr($output, 0, -strlen('.' . $outputFormat->getFileExtension())) : $output;
         $this->compressionLevel = $compressionLevel;
         parent::__construct($input, $callable);
     }
@@ -57,12 +70,18 @@ class FileOrDirectoryCompressTask extends FileOperationTask
     public function onRun(): void
     {
         parent::onRun();
-        $this->setSuccess(ZstdRecursiveCompressor::compress($this->input, $this->output, $this->compressionLevel));
+        try {
+            $this->setSuccess(RecursiveCompressor::compress($this->input, $this->output, $this->compressionLevel, $this->compressor->getFormat()));
+        } catch (RuntimeException $e) {
+            GlobalLogger::get()->critical("Compression failed for {$this->input}: " . $e->getMessage());
+            GlobalLogger::get()->logException($e);
+            $this->setSuccess(false);
+        }
     }
 
     protected function checkSuccess(): void
     {
-        $outputLocation = $this->output . '.' . ZstdRecursiveCompressor::COMPRESSION_FORMAT;
+        $outputLocation = $this->output . '.' . $this->compressor->getFormat()->getFileExtension();
         if ($this->getSuccess()) {
             Server::getInstance()->getLogger()->debug("Compressed directory/file {$this->input} to {$outputLocation}");
         } else {

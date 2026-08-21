@@ -23,26 +23,40 @@ declare(strict_types=1);
 
 namespace libasyncio;
 
+use GlobalLogger;
+use InvalidArgumentException;
+use libasyncio\compression\CompressionFormat;
+use libasyncio\compression\Compressor;
 use pocketmine\Server;
+use RuntimeException;
+use function str_ends_with;
 
 class FileOrDirectoryUncompressTask extends FileOperationTask
 {
 
     /** @var string */
-    private $input;
+    private string $input;
     /** @var string */
     private string $output;
+    /** @var Compressor */
+    private Compressor $compressor;
 
     /**
-     * FileOrDirectoryCompressTask constructor.
+     * FileOrDirectoryUncompressTask constructor.
      *
      * @param string $input
      * @param string $output
      * @param callable $callable
+     * @param CompressionFormat|null $format
      */
-    public function __construct(string $input, string $output, callable $callable)
+    public function __construct(string $input, string $output, callable $callable, ?CompressionFormat $format = null)
     {
-        $this->input = str_replace('.' . ZstdRecursiveCompressor::COMPRESSION_FORMAT, '', $input);
+        if ($format !== null && !$format->isCompatible()) {
+            throw new InvalidArgumentException('Compression format ' . $format->name . ' is not compatible');
+        }
+
+        $this->compressor = ($format ?? CompressionFormat::fromPath($input) ?? CompressionFormat::auto())->getCompressor();
+        $this->input = $input;
         $this->output = $output;
         parent::__construct($input, $callable);
     }
@@ -53,12 +67,20 @@ class FileOrDirectoryUncompressTask extends FileOperationTask
     public function onRun(): void
     {
         parent::onRun();
-        $this->setSuccess(ZstdRecursiveCompressor::uncompress($this->input, $this->output));
+        try {
+            $this->setSuccess(RecursiveCompressor::uncompress($this->input, $this->output, $this->compressor->getFormat()));
+        } catch (RuntimeException $e) {
+            GlobalLogger::get()->critical("Uncompression failed for {$this->input}: " . $e->getMessage());
+            GlobalLogger::get()->logException($e);
+            $this->setSuccess(false);
+        }
     }
 
     protected function checkSuccess(): void
     {
-        $inputLocation = $this->input . '.' . ZstdRecursiveCompressor::COMPRESSION_FORMAT;
+        $extension = $this->compressor->getFormat()->getFileExtension();
+        $inputLocation = str_ends_with($this->input, '.' . $extension) ? $this->input : $this->input . '.' . $extension;
+
         if ($this->getSuccess()) {
             Server::getInstance()->getLogger()->debug("Uncompressed directory/file {$inputLocation} to {$this->output}");
         } else {
