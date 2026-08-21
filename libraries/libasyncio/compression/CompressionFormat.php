@@ -23,9 +23,13 @@ declare(strict_types=1);
 
 namespace libasyncio\compression;
 
+use RuntimeException;
 use function extension_loaded;
 use function str_ends_with;
 
+/**
+ * Order of cases defines priority for {@link #auto()}. The first compatible format wins.
+ */
 enum CompressionFormat
 {
 
@@ -62,6 +66,18 @@ enum CompressionFormat
     }
 
     /**
+     * @return Compressor
+     */
+    public function getCompressor(): Compressor
+    {
+        return match ($this) {
+            self::ZSTD => new Zstd(),
+            self::DEFLATE => new Deflate(),
+            self::GZIP => new Gzip(),
+        };
+    }
+
+    /**
      * @param string $path
      * @return self|null
      */
@@ -74,5 +90,20 @@ enum CompressionFormat
         }
 
         return null;
+    }
+
+    /**
+     * @return self
+     * @throws RuntimeException if no compatible format is found
+     */
+    public static function auto(): self
+    {
+        foreach (self::cases() as $format) {
+            if ($format->isCompatible()) {
+                return $format;
+            }
+        }
+
+        throw new RuntimeException('No compatible compression format found');
     }
 }

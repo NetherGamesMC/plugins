@@ -23,7 +23,7 @@ declare(strict_types=1);
 
 namespace libasyncio;
 
-use libasyncio\compression\Compression;
+use InvalidArgumentException;
 use libasyncio\compression\CompressionFormat;
 use libasyncio\compression\Compressor;
 use pocketmine\Server;
@@ -51,7 +51,11 @@ class FileOrDirectoryCompressTask extends FileOperationTask
      */
     public function __construct(string $input, string $output, callable $callable, ?int $compressionLevel = null, ?CompressionFormat $format = null)
     {
-        $this->compressor = $format !== null ? Compression::get($format) : Compression::auto();
+        if ($format !== null && !$format->isCompatible()) {
+            throw new InvalidArgumentException('Compression format ' . $format->name . ' is not compatible');
+        }
+
+        $this->compressor = ($format ?? CompressionFormat::auto())->getCompressor();
         $this->input = $input;
         $this->output = ($outputFormat = CompressionFormat::fromPath($output)) !== null ? substr($output, 0, -strlen('.' . $outputFormat->getFileExtension())) : $output;
         $this->compressionLevel = $compressionLevel;

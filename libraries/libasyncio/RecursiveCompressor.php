@@ -24,7 +24,6 @@ declare(strict_types=1);
 namespace libasyncio;
 
 use GlobalLogger;
-use libasyncio\compression\Compression;
 use libasyncio\compression\CompressionFormat;
 use libasyncio\compression\Compressor;
 use Phar;
@@ -145,9 +144,9 @@ class RecursiveCompressor
     private static function resolveCompressor(?CompressionFormat $format, ?string $path = null): Compressor
     {
         if ($format !== null) {
-            return Compression::get($format);
+            return $format->getCompressor();
         }
 
-        return $path !== null ? Compression::fromPath($path) : Compression::auto();
+        return ($path !== null ? (CompressionFormat::fromPath($path) ?? CompressionFormat::auto()) : CompressionFormat::auto())->getCompressor();
     }
 }
