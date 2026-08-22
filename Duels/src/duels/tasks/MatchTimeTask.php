@@ -26,6 +26,7 @@ use duels\DuelsTeam;
 use duels\utils\StatsData;
 use libminigames\utils\StatsData as StatsDataAlias;
 use libminigames\Arena;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\utils\TextFormat;
 use function date;
@@ -113,7 +114,7 @@ class MatchTimeTask extends \libminigames\tasks\MatchTimeTask
                         continue;
                     }
                     foreach ($team->getPlayers() as $player) {
-                        $opponent = [$this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($player), $player->getHealth()];
+                        $opponent = [NGEssentials::getInstance()->getPlayerManager()->getPlayerName($player), $player->getHealth()];
                     }
                     break;
                 }
@@ -129,7 +130,7 @@ class MatchTimeTask extends \libminigames\tasks\MatchTimeTask
                     }
                     $key = 0;
                     foreach ($team->getPlayers() as $player) {
-                        $opponent[$key++] = [$this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($player), $player->getHealth()];
+                        $opponent[$key++] = [NGEssentials::getInstance()->getPlayerManager()->getPlayerName($player), $player->getHealth()];
                     }
                     break;
                 }

@@ -22,6 +22,7 @@ use conquests\utils\Items;
 use conquests\utils\StatsData;
 use conquests\utils\Utils;
 use libminigames\Arena;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\entity\effect\EffectInstance;
@@ -44,7 +45,7 @@ class MatchTimeTask extends \libminigames\tasks\MatchTimeTask
     {
         $arena = $this->getArena();
         $plugin = $arena->getPlugin();
-        $ess = $plugin->getEssentials();
+        $ess = NGEssentials::getInstance();
         $playerManager = $ess->getPlayerManager();
         $players = $arena->getPlayers();
         $aliveTeams = $arena->getAliveTeams();

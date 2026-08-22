@@ -30,7 +30,6 @@ use conquests\utils\Utils;
 use conquests\utils\world\Explosion;
 use libminigames\Arena;
 use libminigames\ArenaListener;
-use NetherGames\NGEssentials\events\NGChatEvent;
 use NetherGames\NGEssentials\item\CustomItemRegistry;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
@@ -72,6 +71,7 @@ use pocketmine\event\inventory\InventoryCloseEvent;
 use pocketmine\event\inventory\InventoryOpenEvent;
 use pocketmine\event\inventory\InventoryTransactionEvent;
 use pocketmine\event\player\PlayerBucketEmptyEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerDropItemEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemConsumeEvent;
@@ -638,27 +638,22 @@ class CQArenaListener extends ArenaListener
         $event->cancel();
     }
 
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
         $player = $event->getPlayer();
 
         if ($this->getArena()->isSpectator($player)) {
-            $event->setDisplayName(TextFormat::clean($player->getDisplayName()));
+            $event->setMessage(TextFormat::clean($player->getDisplayName()) . ': ' . $event->getMessage());
             if ($this->getArena()->isPrivateGame()) {
                 $event->setRecipients($this->getArena()->getPlayers());
-                $event->setPrefix('§7Spectator » ');
-                $event->setStaffPrefix('§7Private Spectator Chat Relay > ');
             } else {
                 $event->setRecipients($this->getArena()->getSpectators());
-                $event->setPrefix('§7Dead Chat > ');
-                $event->setStaffPrefix('§7Dead Chat Relay > ');
             }
-            $event->setSplitter(': ');
+            $this->dispatchScopedChat($event);
         } elseif ($this->getArena()->isSoloGame()) {
-            $event->setDisplayName($player->getDisplayName());
+            $event->setMessage($player->getDisplayName() . ': ' . $event->getMessage());
         } else {
             $team = $this->getArena()->getTeam($player);
-            $event->setDisplayName($team->getPlayerName($player));
 
             if ($this->getArena()->isRunning()) {
                 if (str_starts_with(TextFormat::clean($event->getMessage()), '!')) {
@@ -666,8 +661,8 @@ class CQArenaListener extends ArenaListener
                     $event->setMessage($message);
                 } else {
                     $event->setRecipients($team->getAlivePlayers());
-                    $event->setPrefix($team->getColor() . 'Team > ');
-                    $event->setStaffPrefix('§fTeam Chat Relay > ');
+                    $event->setMessage($team->getColor() . 'Team > ' . $event->getMessage());
+                    $this->dispatchScopedChat($event);
                 }
             }
         }
@@ -796,13 +791,13 @@ class CQArenaListener extends ArenaListener
                 }
 
                 if ($killedBy === null) {
-                    $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $team->getPlayerName($entity), $plugin->getRandomKillMessage($event->getCause())), true);
+                    $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $team->getPlayerName($entity), $this->getArena()->getKillMessage(null, $entity, $event->getCause())), true);
                 } else {
                     $damagerTeam = $this->getArena()->getTeam($killedBy);
                     $message = str_replace(
                         ['{PLAYER}', '{DAMAGER}'],
                         [$team->getPlayerName($entity), $damagerTeam->getPlayerName($killedBy)],
-                        $this->getArena()->getPlugin()->getRandomKillMessage($cause, true)
+                        $this->getArena()->getKillMessage($killedBy, $entity, $cause)
                     );
 
                     $this->getArena()->addKill($killedBy, $entity);

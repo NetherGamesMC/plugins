@@ -23,21 +23,17 @@ declare(strict_types=1);
 
 namespace libminigames;
 
-use libminigames\events\MinigameQuitEvent;
-use libminigames\events\MinigameStartEvent;
+use libminigames\events\arena\ArenaStartEvent;
+use libminigames\events\player\PlayerLoginEvent;
+use libminigames\events\player\PlayerInputChangeEvent;
+use libminigames\events\player\PlayerQuitEvent;
+use libminigames\session\GameSession;
 use libminigames\utils\Forms;
+use libminigames\utils\Icon;
 use libminigames\utils\Items;
+use libminigames\utils\Messages;
 use libminigames\utils\StatsData;
 use libVanilla\entity\object\Fireball;
-use NetherGames\NGEssentials\events\NGChatEvent;
-use NetherGames\NGEssentials\events\NGLoginEvent;
-use NetherGames\NGEssentials\events\PlayerInputChangeEvent;
-use NetherGames\NGEssentials\NGEssentials;
-use NetherGames\NGEssentials\player\NGPlayer;
-use NetherGames\NGEssentials\player\PlayerData;
-use NetherGames\NGEssentials\player\Translator;
-use NetherGames\NGEssentials\utils\CustomIcon;
-use NetherGames\NGEssentials\utils\Utils;
 use pocketmine\command\utils\CommandStringHelper;
 use pocketmine\entity\projectile\Arrow;
 use pocketmine\event\block\BlockBreakEvent;
@@ -72,13 +68,15 @@ use pocketmine\event\inventory\InventoryTransactionEvent;
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerBucketEmptyEvent;
 use pocketmine\event\player\PlayerChangeSkinEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerDropItemEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemConsumeEvent;
 use pocketmine\event\player\PlayerItemHeldEvent;
 use pocketmine\event\player\PlayerItemUseEvent;
+use pocketmine\event\player\PlayerJoinEvent as PMPlayerJoinEvent;
 use pocketmine\event\player\PlayerKickEvent;
-use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\event\player\PlayerQuitEvent as PMPlayerQuitEvent;
 use pocketmine\event\server\CommandEvent;
 use pocketmine\item\Item;
 use pocketmine\network\mcpe\protocol\types\InputMode;
@@ -87,6 +85,7 @@ use pocketmine\scheduler\ClosureTask;
 use pocketmine\utils\TextFormat;
 use function array_shift;
 use function count;
+use function floor;
 use function in_array;
 use function round;
 
@@ -276,67 +275,36 @@ class MinigameListener implements Listener
     }
 
     /**
-     * @param NGLoginEvent $event
+     * @param PMPlayerJoinEvent $event
      *
      * @priority NORMAL
      */
-    public function onNGLogin(NGLoginEvent $event): void
+    public function onPlayerJoin(PMPlayerJoinEvent $event): void
+    {
+        $player = $event->getPlayer();
+        $plugin = $this->getPlugin();
+
+        // Give external modules (e.g. a session bridge) a chance to prepare before we decide to
+        // place the player in a game.
+        $plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($player, $plugin): void {
+            if ($player->isConnected() && $plugin->getArena($player) === null) {
+                (new PlayerLoginEvent($player))->call();
+            }
+        }), 2);
+    }
+
+    /**
+     * @param PlayerLoginEvent $event
+     *
+     * @priority NORMAL
+     */
+    public function onPlayerLogin(PlayerLoginEvent $event): void
     {
         $plugin = $this->getPlugin();
-        if (!NGEssentials::isInDevelopmentMode() && $plugin->isStandAloneGame()) {
-            $player = $event->getPlayer();
-            $ess = $plugin->getEssentials();
+        $player = $event->getPlayer();
 
-            if ($ess->getPlayerData()->getString($player, PlayerData::TRACK) === '') {
-                $playerManager = $ess->getPlayerManager();
-
-                if (($party = ($partyManager = $playerManager->getSocialManager()->getPartyManager())->getParty($player, false)) === null) {
-                    $plugin->joinArena($player);
-                } else {
-                    // +1 player might not be added to logged in players yet
-                    $players = $partyManager->getPlayers($party);
-                    $isAlreadyInParty = in_array($player, $players, true);
-                    $onlinePlayers = count($players) + ($isAlreadyInParty ? 0 : 1);
-
-                    if ($onlinePlayers === count($party->getAll())) {
-                        if ($isAlreadyInParty) {
-                            /** @var Player $leader */
-                            $leader = $party->getLeader();
-
-                            $plugin->joinArena($leader);
-                        } else {
-                            $plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($plugin, $party): void {
-                                $leader = $party->getLeader();
-
-                                if ($leader instanceof Player && $leader->isConnected()) {
-                                    $plugin->joinArena($leader);
-                                }
-                            }), 1);
-                        }
-                    } else {
-                        $plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($plugin, $player, $partyManager): void {
-                            if (!$player->isConnected()) {
-                                return;
-                            }
-
-                            if (($party = $partyManager->getParty($player)) === null) {
-                                if ($plugin->getArena($player) === null) {
-                                    $plugin->joinArena($player);
-                                }
-                            } else {
-                                /** @var Player $leader */
-                                $leader = $party->getLeader();
-                                if ($plugin->getArena($leader) === null) {
-                                    $partyManager->cleanMembers($party);
-
-                                    $leader->sendMessage(TextFormat::RED . "One of your party members hasn't connected to this server. Joining the game...");
-                                    $plugin->joinArena($leader);
-                                }
-                            }
-                        }), 3 * 20);
-                    }
-                }
-            }
+        if ($plugin->isStandAloneGame() && $plugin->getArena($player) === null) {
+            $plugin->joinArena($player);
         }
     }
 
@@ -350,21 +318,21 @@ class MinigameListener implements Listener
         $player = $event->getPlayer();
 
         if (($arena = $this->getPlugin()->getArena($player)) !== null) {
-            $arena->removePlayer($player, MinigameQuitEvent::DISCONNECT_KICK);
+            $arena->removePlayer($player, PlayerQuitEvent::DISCONNECT_KICK);
         }
     }
 
     /**
-     * @param PlayerQuitEvent $event
+     * @param PMPlayerQuitEvent $event
      *
      * @priority NORMAL
      */
-    public function onPlayerQuit(PlayerQuitEvent $event): void
+    public function onPlayerQuit(PMPlayerQuitEvent $event): void
     {
         $player = $event->getPlayer();
 
         if (($arena = $this->getPlugin()->getArena($player)) !== null) {
-            $arena->removePlayer($player, MinigameQuitEvent::DISCONNECT);
+            $arena->removePlayer($player, PlayerQuitEvent::DISCONNECT);
         }
     }
 
@@ -467,7 +435,7 @@ class MinigameListener implements Listener
         $player = $event->getPlayer();
 
         if (($arena = $this->getPlugin()->getArena($player)) !== null) {
-            if (!Utils::hasClassicUI($player) && $this->onItemInteract($arena, $player, $event->getItem())) {
+            if (!GameSession::getSession($player)->isClassicUi() && $this->onItemInteract($arena, $player, $event->getItem())) {
                 return;
             }
 
@@ -483,7 +451,7 @@ class MinigameListener implements Listener
             if ($item->equals(Items::getMapSelectionPaper())) {
                 Forms::sendMapSelector($player, $arena);
             } else if ($item->equals(Items::getQuitBed())) {
-                $arena->removePlayer($player, MinigameQuitEvent::LEAVE);
+                $arena->removePlayer($player, PlayerQuitEvent::LEAVE);
             } else if ($arena instanceof TeamArena && $item->equals(Items::getTeamSelectionWool($arena->getTeam($player)->getDyeColor()))) {
                 Forms::sendTeamSelector($player, $arena);
             } else {
@@ -495,16 +463,10 @@ class MinigameListener implements Listener
 
         if ($arena->isSpectator($player)) {
             if ($item->equals(Items::getReplayPaper(), false)) {
-                $partyManager = $this->getPlugin()->getEssentials()->getPlayerManager()->getSocialManager()->getPartyManager();
-
-                if ($partyManager->isInParty($player) && !$partyManager->isPartyCreator($player)) {
-                    $player->sendMessage('§cYou can\'t join another game while you\'re in a party. Wait for your party host to decide when to play again!');
-                } else {
-                    $mode = $this->getPlugin()->getModes()[$arena->getModeId()];
-                    $this->getPlugin()->requeuePlayer($player, $arena, $mode);
-                }
+                $mode = $this->getPlugin()->getModes()[$arena->getModeId()];
+                $this->getPlugin()->requeuePlayer($player, $arena, $mode);
             } elseif ($item->equals(Items::getQuitBed())) {
-                $arena->removePlayer($player, MinigameQuitEvent::END);
+                $arena->removePlayer($player, PlayerQuitEvent::END);
             } elseif ($item->equals(Items::getSpectatorCompass(), false)) {
                 Forms::sendTeleporter($player, $arena);
             } else {
@@ -717,11 +679,11 @@ class MinigameListener implements Listener
     }
 
     /**
-     * @param NGChatEvent $event
+     * @param PlayerChatEvent $event
      *
-     * @priority NORMAL
+     * @priority LOWEST
      */
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
         if (($arena = $this->getPlugin()->getArena($event->getPlayer())) !== null) {
             $arena->getListener()->onPlayerChat($event);
@@ -799,18 +761,17 @@ class MinigameListener implements Listener
 
                                 if ($event instanceof EntityDamageByChildEntityEvent) {
                                     $child = $event->getChild();
-                                    /** @var NGPlayer $damager */
                                     if ($child instanceof Arrow) {
-                                        $damager->playSound('random.orb');
-                                        $damager->sendMessage($playerName . TextFormat::YELLOW . ' is on ' . TextFormat::RED . round(($player->getHealth() - $event->getFinalDamage()) / 2, 1) . CustomIcon::HEART);
+                                        GameSession::getSession($damager)->playSound('random.orb');
+                                        $damager->sendMessage($playerName . TextFormat::YELLOW . ' is on ' . TextFormat::RED . round(($player->getHealth() - $event->getFinalDamage()) / 2, 1) . Icon::get('heart'));
                                     } else if ($child instanceof Fireball) {
-                                        $damager->playSound('random.orb');
+                                        GameSession::getSession($damager)->playSound('random.orb');
                                         $distance = $player->getPosition()->distance($damager->getPosition());
                                         if ($distance >= 50) {
-                                            Translator::sendMessage($damager, 'fireball.perfect.hit', Translator::TYPE_SUCCESS, ...['playerName' => $playerName, 'blocks' => (string)floor($distance)]);
+                                            Messages::send($damager, 'fireball.perfect.hit', ['playerName' => $playerName, 'blocks' => (string)floor($distance)], 'chat', 'success');
                                             if ($distance >= 85) {
                                                 $arena->getStatsData()->addValue($damager->getName(), StatsData::PERFECT_SHOTS);
-                                                $damager->playSound('mob.enderdragon.death');
+                                                GameSession::getSession($damager)->playSound('mob.enderdragon.death');
                                             }
                                         }
                                     }
@@ -912,7 +873,7 @@ class MinigameListener implements Listener
     {
         $player = $event->getSender();
 
-        if (!($player instanceof Player) || NGEssentials::isInDevelopmentMode() || ($arena = $this->getPlugin()->getArena($player)) === null || $arena->isPrivateGame()) {
+        if (!($player instanceof Player) || ($arena = $this->getPlugin()->getArena($player)) === null || $arena->isPrivateGame()) {
             return;
         }
 
@@ -928,12 +889,10 @@ class MinigameListener implements Listener
         }
     }
 
-    public function onMinigameStart(MinigameStartEvent $event): void
+    public function onArenaStart(ArenaStartEvent $event): void
     {
-        $player = $event->getPlayer();
-        if (($arena = $this->getPlugin()->getArena($player)) !== null) {
-            $arena->getListener()->onMinigameStart($event);
-        }
+        $arena = $event->getArena();
+        $arena->getListener()->onArenaStart($event);
     }
 
     public function onEntityRegainHealth(EntityRegainHealthEvent $event): void

@@ -62,11 +62,6 @@ class Duels extends Minigame
         return new DuelsArena($this, $modeId, $this->mapsPlayed++, $privateGame);
     }
 
-    public function getMinigameTag(): string
-    {
-        return ServerManager::DUELS;
-    }
-
     public function getMaps(bool $isSumo, bool $onlyEnabled): array
     {
         $pattern = $isSumo ? "/^([a-zA-Z]-)?DLS-Sumo-([a-zA-Z0-9_]+)$/" : "/^([a-zA-Z]-)?DLS-([a-zA-Z0-9]+)$/";

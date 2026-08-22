@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace survivalgames\chest;
 
 use NetherGames\NGEssentials\entity\custom\FloatingText;
+use NetherGames\NGEssentials\NGEssentials;
 use pocketmine\block\inventory\ChestInventory;
 use pocketmine\entity\Location;
 use pocketmine\item\Armor;
@@ -63,7 +64,7 @@ class ChestManager
             $timer->getMetadata()->setFloat(EntityMetadataProperties::BOUNDING_BOX_HEIGHT, 1.2);
             $timer->getMetadata()->setFloat(EntityMetadataProperties::BOUNDING_BOX_WIDTH, 0.95);
 
-            $this->getArena()->getPlugin()->getEssentials()->getEntityManager()->addEntity($timer);
+            NGEssentials::getInstance()->getEntityManager()->addEntity($timer);
         }
 
         if (!isset($this->filledChests[$hash])) {
@@ -121,7 +122,7 @@ class ChestManager
                 if (!$exists) {
                     $this->chestTimers[$hash] = $timer = new FloatingText(new Location($pos->getX() + 0.5, $pos->getY() + 1, $pos->getZ() + 0.5, $pos->getWorld(), 0.0, 0.0), TextFormat::RED . 'Empty!');
 
-                    $plugin->getEssentials()->getEntityManager()->addEntity($timer);
+                    NGEssentials::getInstance()->getEntityManager()->addEntity($timer);
                 }
             } else {
                 $timer = $this->chestTimers[$hash];
@@ -147,7 +148,7 @@ class ChestManager
         } elseif ($exists) {
             $timer = $this->chestTimers[$hash];
 
-            $plugin->getEssentials()->getEntityManager()->addEntity($timer);
+            NGEssentials::getInstance()->getEntityManager()->addEntity($timer);
 
             unset($this->chestTimers[$hash]);
         }
@@ -187,7 +188,7 @@ class ChestManager
         $this->lastRefill = $lastRefill;
 
         if ($this->getArena()->isNormal()) {
-            $entityManager = $this->getArena()->getPlugin()->getEssentials()->getEntityManager();
+            $entityManager = NGEssentials::getInstance()->getEntityManager();
             foreach ($this->getChestTimers() as $hash => $timer) {
                 if ($lastRefill) {
                     $entityManager->removeEntity($timer);

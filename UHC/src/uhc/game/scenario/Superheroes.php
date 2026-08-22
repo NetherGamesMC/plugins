@@ -3,16 +3,23 @@ declare(strict_types=1);
 
 namespace uhc\game\scenario;
 
-use libminigames\events\MinigameStartEvent;
+use libminigames\events\arena\ArenaStartEvent;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
+use pocketmine\player\Player;
 use uhc\game\scenario\base\Scenario;
 
 class Superheroes extends Scenario
 {
-    public function onMinigameStart(MinigameStartEvent $event): void
+    public function onArenaStart(ArenaStartEvent $event): void
     {
-        $player = $event->getPlayer();
+        foreach ($event->getArena()->getAlivePlayers() as $player) {
+            $this->applySuperpower($player);
+        }
+    }
+
+    private function applySuperpower(Player $player): void
+    {
         $effects = $player->getEffects();
         switch (mt_rand(0, 4)) {
             case 0:

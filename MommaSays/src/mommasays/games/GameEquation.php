@@ -23,7 +23,7 @@ declare(strict_types=1);
 
 namespace mommasays\games;
 
-use NetherGames\NGEssentials\events\NGChatEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\utils\TextFormat;
 use function is_float;
 use function random_int;
@@ -67,7 +67,7 @@ class GameEquation extends Game
         }
     }
 
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
         $player = $event->getPlayer();
 

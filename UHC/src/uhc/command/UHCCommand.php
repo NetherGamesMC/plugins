@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace uhc\command;
 
 use libminigames\Command;
-use libminigames\events\MinigameQuitEvent;
+use libminigames\events\player\PlayerQuitEvent;
 use libminigames\utils\Forms;
 use NetherGames\NGEssentials\NGEssentials;
 use pocketmine\command\CommandSender;
@@ -31,7 +31,7 @@ class UHCCommand extends Command
     public function execute(CommandSender $sender, string $commandLabel, array $args): bool
     {
         if (!$sender instanceof Player) {
-            $sender->sendMessage($this->getPlugin()->getEssentials()->getPrefix() . '§cThat command can only be run in-game.');
+            $sender->sendMessage(NGEssentials::getInstance()->getPrefix() . '§cThat command can only be run in-game.');
             return false;
         }
 
@@ -40,7 +40,7 @@ class UHCCommand extends Command
                 if (($arena = $this->getPlugin()->getArena($sender)) === null) {
                     $sender->sendMessage(TextFormat::RED . "You're not in a " . $this->getPlugin()->getMinigameName() . ' game.');
                 } else {
-                    $arena->removePlayer($sender, MinigameQuitEvent::LEAVE);
+                    $arena->removePlayer($sender, PlayerQuitEvent::LEAVE);
                 }
             } elseif (NGEssentials::isInDevelopmentMode()) {
                 switch ($args[0]) {
@@ -70,7 +70,7 @@ class UHCCommand extends Command
                         }
                         break;
                 }
-            } elseif ($args[0] === 'join' && $this->getPlugin()->getEssentials()->getServerManager()->enableLobbyHandling()) {
+            } elseif ($args[0] === 'join' && NGEssentials::getInstance()->getServerManager()->enableLobbyHandling()) {
                 if (count($this->getPlugin()->getModes()) > 1) {
                     Forms::sendReplayMenu($this->getPlugin(), $sender, false);
                 } else {

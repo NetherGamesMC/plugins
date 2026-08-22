@@ -6,7 +6,6 @@ namespace uhc\game;
 
 use libminigames\Arena;
 use libminigames\ArenaListener;
-use NetherGames\NGEssentials\events\NGChatEvent;
 use NetherGames\NGEssentials\player\NGPlayer;
 use pocketmine\block\BlockTypeIds;
 use pocketmine\event\block\BlockBreakEvent;
@@ -19,6 +18,7 @@ use pocketmine\event\entity\EntityDamageByChildEntityEvent;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\EntityRegainHealthEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\item\Item;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
@@ -114,31 +114,26 @@ class UHCArenaListener extends ArenaListener
         return parent::onItemInteract($player, $item);
     }
 
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
         $player = $event->getPlayer();
 
         if ($this->getArena()->isSpectator($player)) {
-            $event->setDisplayName(TextFormat::clean($player->getDisplayName()));
             $event->setRecipients($this->getArena()->getSpectators());
-            $event->setPrefix('§7Dead Chat > ');
-            $event->setStaffPrefix('§7Dead Chat Relay > ');
-            $event->setSplitter(': ');
-        } elseif ($this->getArena()->isSoloGame()) {
-            $event->setDisplayName($player->getDisplayName());
-        } else {
+            $event->setMessage('§7Dead Chat > ' . $event->getMessage());
+            $this->dispatchScopedChat($event);
+        } elseif (!$this->getArena()->isSoloGame()) {
             /** @var UHCArena $arena */
             $arena = $this->getArena();
             $team = $arena->getTeam($player);
-            $event->setDisplayName($team->getPlayerName($player));
 
             if ($this->getArena()->isRunning()) {
                 if (str_starts_with(TextFormat::clean($event->getMessage()), '!')) {
                     $event->setMessage(preg_replace('/!/', '', $event->getMessage(), 1) ?? "");
                 } else {
                     $event->setRecipients($team->getAlivePlayers());
-                    $event->setPrefix($team->getColor() . 'Team > ');
-                    $event->setStaffPrefix('§fTeam Chat Relay > ');
+                    $event->setMessage($team->getColor() . 'Team > ' . $event->getMessage());
+                    $this->dispatchScopedChat($event);
                 }
             }
         }

@@ -30,6 +30,7 @@ use libminigames\Team;
 use libminigames\TeamArena;
 use NetherGames\NGEssentials\entity\custom\EntityNPC;
 use NetherGames\NGEssentials\entity\custom\HumanNPC;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\cosmetics\CosmeticHandler;
 use NetherGames\NGEssentials\player\GameSettings;
 use NetherGames\NGEssentials\player\NGPlayer;
@@ -39,6 +40,7 @@ use pocketmine\color\Color;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Location;
+use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\inventory\ArmorInventory;
 use pocketmine\item\Armor;
 use pocketmine\item\enchantment\EnchantmentInstance;
@@ -132,7 +134,7 @@ class CQTeam extends Team
     private function spawnShopkeeper(Location $location, string $name, Closure $callable): void
     {
         $arena = $this->getArena();
-        $ess = $arena->getPlugin()->getEssentials();
+        $ess = NGEssentials::getInstance();
         $gameSettings = $ess->getPlayerData()->getGameSettings();
 
         $onClick = static function (Player $player) use ($arena, $gameSettings, $callable) {
@@ -352,7 +354,7 @@ class CQTeam extends Team
             if (($damager = $arena->getLatestActiveHitter($player)) !== null) {
                 $damagerTeam = $arena->getTeam($damager);
 
-                $arena->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$this->getPlayerName($player), $damagerTeam->getPlayerName($damager)], $arena->getPlugin()->getRandomKillMessage(1, true)), true);
+                $arena->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$this->getPlayerName($player), $damagerTeam->getPlayerName($damager)], $arena->getKillMessage($damager, $player, EntityDamageEvent::CAUSE_ENTITY_ATTACK)), true);
                 $arena->addKill($damager, $player);
             }
 

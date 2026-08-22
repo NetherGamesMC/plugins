@@ -25,8 +25,8 @@ namespace libminigames\utils;
 
 use libminigames\Arena;
 use libminigames\TeamArena;
-use NetherGames\NGEssentials\item\CustomItemRegistry;
 use pocketmine\block\utils\DyeColor;
+use pocketmine\block\VanillaBlocks;
 use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
@@ -56,41 +56,47 @@ abstract class Items
 
     public static function getSpectatorCompass(): Item
     {
-        return CustomItemRegistry::TELEPORTER()->setCustomName(TextFormat::RESET . TextFormat::GREEN . TextFormat::BOLD . "Teleporter");
+        return VanillaItems::COMPASS()->setCustomName(TextFormat::RESET . TextFormat::GREEN . TextFormat::BOLD . "Teleporter");
     }
 
     public static function getQuitBed(?DyeColor $color = null): Item
     {
-        return CustomItemRegistry::LEAVE()->setCustomName(TextFormat::RESET . TextFormat::RED . TextFormat::BOLD . "Return to Lobby");
+        $bed = VanillaBlocks::BED();
+        $bed->setColor($color ?? DyeColor::RED());
+
+        return $bed->asItem()->setCustomName(TextFormat::RESET . TextFormat::RED . TextFormat::BOLD . "Return to Lobby");
     }
 
     public static function getTeamSelectionWool(?DyeColor $color): Item
     {
-        return CustomItemRegistry::TEAM_SELECTOR($color ??= DyeColor::RED())->setCustomName(TextFormat::RESET . Utils::getTextColorByDyeColor($color) . TextFormat::BOLD . 'Change Team');
+        $wool = VanillaBlocks::WOOL();
+        $wool->setColor($color ?? DyeColor::RED());
+
+        return $wool->asItem()->setCustomName(TextFormat::RESET . Utils::getTextColorByDyeColor($color ?? DyeColor::RED()) . TextFormat::BOLD . 'Change Team');
     }
 
     public static function getTeamSelectionWoolByPlayer(Player $player, Arena $arena): Item
     {
         if (!$arena instanceof TeamArena || $arena->isSpectator($player)) {
             return self::getTeamSelectionWool(DyeColor::LIGHT_GRAY());
-        } else {
-            return self::getTeamSelectionWool($arena->getTeam($player)->getDyeColor());
         }
+
+        return self::getTeamSelectionWool($arena->getTeam($player)->getDyeColor());
     }
 
     public static function getMapSelectionPaper(): Item
     {
-        return CustomItemRegistry::ZONES()->setCustomName(TextFormat::RESET . TextFormat::GREEN . TextFormat::BOLD . "Map Selector");
+        return VanillaItems::PAPER()->setCustomName(TextFormat::RESET . TextFormat::GREEN . TextFormat::BOLD . "Map Selector");
     }
 
     public static function getReplayPaper(): Item
     {
-        return CustomItemRegistry::PLAY_AGAIN()->setCustomName(TextFormat::RESET . TextFormat::GREEN . TextFormat::BOLD . "Play Again");
+        return VanillaItems::PAPER()->setCustomName(TextFormat::RESET . TextFormat::GREEN . TextFormat::BOLD . "Play Again");
     }
 
     public static function getTypeSelectionAnvil(): Item
     {
-        return CustomItemRegistry::SCENARIO()->setCustomName(TextFormat::RESET . TextFormat::GREEN . TextFormat::BOLD . "Mode Selector");
+        return VanillaItems::PAPER()->setCustomName(TextFormat::RESET . TextFormat::GREEN . TextFormat::BOLD . "Mode Selector");
     }
 
     public static function getGameSettingsBlazeRod(): Item
@@ -100,6 +106,6 @@ abstract class Items
 
     public static function getManualStart(): Item
     {
-        return CustomItemRegistry::PLAY()->setCustomName(TextFormat::RESET . TextFormat::GREEN . TextFormat::BOLD . "Start Game");
+        return VanillaItems::PAPER()->setCustomName(TextFormat::RESET . TextFormat::GREEN . TextFormat::BOLD . "Start Game");
     }
 }

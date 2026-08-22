@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace murdermystery\gamemodes\classic;
 
 use libminigames\ArenaListener;
+use libminigames\utils\RewardEntry;
 use murdermystery\gamemodes\classic\tasks\MatchTimeClassicTask;
 use murdermystery\gamemodes\MMArena;
 use murdermystery\MurderMystery;
@@ -191,39 +192,27 @@ class MMArenaClassic extends MMArena
         }
     }
 
-    public function addParticipation(Player $player, array $data, bool $guildXP = false): void
+    public function getRewards(Player $player): array
     {
+        $rewards = [];
         $murderer = $this->getMurderer();
 
         if ($murderer === null) {
             if ($player === $this->getMurderKiller()) {
-                $data[self::DATA_XP][] = [
-                    'Killed The Murderer',
-                    9,
-                ];
-
-                $data[self::DATA_CREDITS][] = [
-                    'Killed The Murderer',
-                    $this->isDetective($player) ? 12 : 15
-                ];
+                $rewards[] = new RewardEntry('xp', 9, 'Killed The Murderer');
+                $rewards[] = new RewardEntry('credits', $this->isDetective($player) ? 12 : 15, 'Killed The Murderer');
             }
         }
 
         if ($this->isWinner($player)) {
             if ($player === $murderer) {
-                $data[self::DATA_CREDITS][] = [
-                    'Win As Murderer',
-                    10,
-                ];
+                $rewards[] = new RewardEntry('credits', 10, 'Win As Murderer');
             } elseif ($player !== $this->getMurderKiller()) {
-                $data[self::DATA_CREDITS][] = [
-                    'Win As ' . ($this->isDetective($player) ? "Detective" : "Innocent"),
-                    8,
-                ];
+                $rewards[] = new RewardEntry('credits', 8, 'Win As ' . ($this->isDetective($player) ? "Detective" : "Innocent"));
             }
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        return $rewards;
     }
 
     public function getMurderer(): ?Player

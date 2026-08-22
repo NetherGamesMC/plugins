@@ -19,12 +19,6 @@ parameters:
 			path: pool/WeightedPool.php
 
 		-
-			message: '#^Method libminigames\\settings\\GameSettings\:\:fetchFromPlayer\(\) has ReflectionException in PHPDoc @throws tag but it''s not thrown\.$#'
-			identifier: throws.unusedType
-			count: 1
-			path: settings/GameSettings.php
-
-		-
 			message: '#^Parameter \#1 \$callback of function array_map expects \(callable\(ReflectionIntersectionType\|ReflectionNamedType\)\: mixed\)\|null, Closure\(ReflectionNamedType\)\: string given\.$#'
 			identifier: argument.type
 			count: 1
@@ -65,15 +59,3 @@ parameters:
 			identifier: offsetAccess.invalidOffset
 			count: 2
 			path: settings/components/StepSlider.php
-
-		-
-			message: '#^Binary operation "\." between mixed and ''/v1/leaderboard…'' results in an error\.$#'
-			identifier: binaryOp.invalid
-			count: 1
-			path: utils/LeaderboardData.php
-
-		-
-			message: '#^Parameter \#1 \$row of static method libminigames\\utils\\streaks\\Streak\:\:FromSQL\(\) expects array\<string\>, mixed given\.$#'
-			identifier: argument.type
-			count: 3
-			path: utils/Streaks.php

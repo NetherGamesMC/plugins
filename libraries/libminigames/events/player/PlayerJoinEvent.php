@@ -21,9 +21,32 @@
  */
 declare(strict_types=1);
 
-namespace libminigames\events;
+namespace libminigames\events\player;
 
-class MinigameJoinEvent extends MinigameEvent
+use libminigames\Arena;
+use pocketmine\event\Cancellable;
+use pocketmine\event\CancellableTrait;
+use pocketmine\player\Player;
+
+/**
+ * Fired when a player begins joining an arena, before they are added.
+ */
+class PlayerJoinEvent extends PlayerEvent implements Cancellable
 {
+    use CancellableTrait;
 
+    public function __construct(Player $player, private Arena $arena, private int $modeId)
+    {
+        parent::__construct($player);
+    }
+
+    public function getArena(): Arena
+    {
+        return $this->arena;
+    }
+
+    public function getModeId(): int
+    {
+        return $this->modeId;
+    }
 }

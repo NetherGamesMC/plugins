@@ -30,6 +30,7 @@ use bedwars\utils\Items;
 use bedwars\utils\StatsData;
 use bedwars\utils\Utils;
 use libminigames\Arena;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\block\tile\Bed;
@@ -56,7 +57,7 @@ class MatchTimeTask extends \libminigames\tasks\MatchTimeTask
         $arena = $this->getArena();
         $world = $arena->getWorld();
         $plugin = $arena->getPlugin();
-        $ess = $plugin->getEssentials();
+        $ess = NGEssentials::getInstance();
         $playerManager = $ess->getPlayerManager();
         $players = $arena->getPlayers();
 

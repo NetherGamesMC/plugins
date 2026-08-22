@@ -21,41 +21,48 @@
  */
 declare(strict_types=1);
 
-namespace libminigames\events;
+namespace libminigames\events\player;
 
-use libminigames\Minigame;
-use pocketmine\event\plugin\PluginEvent;
+use libminigames\Arena;
+use pocketmine\event\Cancellable;
+use pocketmine\event\CancellableTrait;
 use pocketmine\player\Player;
 
-class PlayerStatChangeEvent extends PluginEvent
+/**
+ * Fired when a player requeues into another game after a match.
+ *
+ * <p>Handlers may adjust the requeue size via {@see PlayerRequeueEvent::setSize()} to account for
+ * grouped players (e.g. a party).
+ */
+class PlayerRequeueEvent extends PlayerEvent implements Cancellable
 {
-    public function __construct(protected Player $player, protected int $statId, protected string $statName, protected int $oldValue, protected int $newValue)
+    use CancellableTrait;
+
+    public function __construct(Player $player, private Arena $arena, private string $mode, private int $size = 1)
     {
-        parent::__construct(Minigame::getInstance());
+        parent::__construct($player);
     }
 
-    public function getPlayer(): Player
+    public function getArena(): Arena
     {
-        return $this->player;
+        return $this->arena;
     }
 
-    public function getStatId(): int
+    public function getMode(): string
     {
-        return $this->statId;
+        return $this->mode;
     }
 
-    public function getStatName(): string
+    /**
+     * The amount of players requeueing together as a unit.
+     */
+    public function getSize(): int
     {
-        return $this->statName;
+        return $this->size;
     }
 
-    public function getOldValue(): int
+    public function setSize(int $size): void
     {
-        return $this->oldValue;
-    }
-
-    public function getNewValue(): int
-    {
-        return $this->newValue;
+        $this->size = $size;
     }
 }

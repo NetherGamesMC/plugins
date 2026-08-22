@@ -23,26 +23,10 @@ declare(strict_types=1);
 
 namespace libminigames\utils;
 
-use libasynCurl\Curl;
-use libminigames\Arena;
-use NetherGames\NGEssentials\NGEssentials;
-use NetherGames\NGEssentials\player\PlayerStats;
-use NetherGames\NGEssentials\ServerManager;
-use NetherGames\NGEssentials\utils\CustomIcon;
-use NetherGames\NGEssentials\utils\MySQLCredentials;
+use libminigames\events\player\PlayerStatChangeEvent;
 use pocketmine\player\Player;
 use RuntimeException;
-use function array_keys;
 use function array_map;
-use function array_reduce;
-use function array_shift;
-use function array_slice;
-use function arsort;
-use function count;
-use function explode;
-use function getenv;
-use function implode;
-use function in_array;
 use function str_replace;
 use function strtolower;
 
@@ -53,9 +37,6 @@ abstract class StatsData
     public const WINS = 2;
     public const LOSSES = 3;
     public const PERFECT_SHOTS = 4;
-
-    private const DB_COLUMN = 0;
-    private const DB_VALUE = 1;
 
     /** @var array<string, array<int, int>> */
     private array $stats = [];
@@ -103,18 +84,134 @@ abstract class StatsData
 
     public function addValue(Player|string $player, int $id, int $value = 1): void
     {
-        $ess = NGEssentials::getInstance();
-        if ($ess->getServerManager()->getServerType() === ServerManager::SETUP) {
-            return;
-        }
-
         $playerXuid = $player instanceof Player ? $player->getXuid() : $player;
         if (isset($this->statTypes[$id])) {
-            $this->stats[$playerXuid][$id] = $this->getValue($player, $id) + $value;
+            $oldValue = $this->getValue($player, $id);
+            $newValue = $oldValue + $value;
+
+            $this->stats[$playerXuid][$id] = $newValue;
             $this->tempStats[$playerXuid][$id] = $this->getValue($player, $id, true) + $value;
+
+            if ($player instanceof Player) {
+                (new PlayerStatChangeEvent($player, $id, $this->getStatName($id), $oldValue, $newValue))->call();
+            }
         } else {
             throw new RuntimeException('Stat with id ' . $id . " doesn't exist");
         }
+    }
+
+    /**
+     * The map of player xuid to victim xuid to stat id to count, tracking every kill that happened
+     * in this stats instance.
+     *
+     * @return array<string, array<string, array<int, int>>>
+     */
+    public function getKills(): array
+    {
+        return $this->kills;
+    }
+
+    /**
+     * Returns the map of stat id to value (non-zero) for the given player, keyed by the ids
+     * registered via {@see StatsData::registerStat()}.
+     *
+     * @param Player $player
+     * @return array<int, int>
+     */
+    public function getValues(Player $player): array
+    {
+        $result = [];
+
+        foreach ($this->statTypes as $id => $name) {
+            $value = $this->getValue($player, $id);
+            if ($value !== 0) {
+                $result[$id] = $value;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Returns a map of stat name to value for the given player.
+     *
+     * @param Player $player
+     * @return array<string, int>
+     */
+    public function snapshot(Player $player): array
+    {
+        $result = [];
+
+        foreach ($this->statTypes as $id => $name) {
+            if ($name === null) {
+                continue;
+            }
+
+            $value = $this->getValue($player, $id);
+            if ($value !== 0) {
+                $result[$name] = $value;
+            }
+        }
+
+        return $result;
+    }
+
+    private function getStatName(int $id): string
+    {
+        return $this->statTypes[$id] ?? "stat_$id";
+    }
+
+    /**
+     * The mode identifier this stats data was constructed with.
+     */
+    public function getMode(): string
+    {
+        return $this->mode;
+    }
+
+    /**
+     * @return array<string> The registered stat type/variation names.
+     */
+    public function getTypes(): array
+    {
+        return $this->types;
+    }
+
+    /**
+     * Returns the resolvable database column name for the given stat id.
+     *
+     * <p>The <code>*mode*</code> and <code>*type*</code> placeholders used by subclasses are
+     * substituted here. Consumers (such as an external persistence module) should only touch
+     * stats whose {@see StatsData::getColumnName()} resolves to a non-null name.
+     *
+     * @param int $id
+     * @param int $typeId
+     */
+    public function getColumnName(int $id, int $typeId = -1): string
+    {
+        $columnName = $this->statTypes[$id] ?? '';
+
+        if ($columnName === '') {
+            return '';
+        }
+
+        $columnName = str_replace('*mode*', $this->mode, $columnName);
+
+        if ($typeId !== -1) {
+            $columnName = str_replace('*type*', $this->types[$typeId] ?? 'unknown', $columnName);
+        }
+
+        return $columnName;
+    }
+
+    /**
+     * Returns whether the given stat id should be persisted (has a resolvable column name).
+     *
+     * @param int $id
+     */
+    public function isSaveableStat(int $id): bool
+    {
+        return ($this->statTypes[$id] ?? null) !== null;
     }
 
     public function resetTempStats(Player $player): void
@@ -129,172 +226,5 @@ abstract class StatsData
             return $this->tempStats[$playerXuid][$id] ?? 0;
         }
         return $this->stats[$playerXuid][$id] ?? 0;
-    }
-
-    private function saveTournament(Arena $arena, int $typeId): void
-    {
-        $tournamentManager = NGEssentials::getInstance()->getTournamentManager();
-        if (!$tournamentManager->inTournament()) {
-            return;
-        }
-
-        foreach ($arena->getXuids() as $xuid) {
-            if (isset($this->kills[$xuid])) {
-                foreach ($this->kills[$xuid] as $victimXuid => $kills) {
-                    foreach ($kills as $id => $value) {
-                        $columnName = $this->getColumnName($id, $typeId);
-
-                        if (in_array($columnName, $tournamentManager->getColumns())) {
-                            MySQLCredentials::executeInsertRaw('INSERT INTO tournament_logs (type, origin_xuid, target_xuid) VALUES (?, ?, ?)', [$columnName, $xuid, $victimXuid]);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    public function sendLeaderboard(Arena $arena, int $id, string $title): void
-    {
-        /** @var array<string, int> $stats */
-        $stats = array_reduce(array_keys($xuids = $arena->getXuids()), function (array $carry, string $playerName) use ($id, $xuids): array {
-            $value = $this->getValue($xuids[$playerName], $id);
-            if ($value !== 0) {
-                $carry[$playerName] = $value;
-            }
-            return $carry;
-        }, []);
-
-        if (count($stats) === 0) {
-            return;
-        }
-
-        arsort($stats);
-
-        $arena->broadcastMessage('§e§l----------------------------', true);
-        $arena->broadcastMessage($title, true);
-
-        $podium = array_slice($stats, 0, 3, true);
-        $place = 0;
-        foreach ($podium as $playerName => $value) {
-            $place++;
-
-            $icon = match ($place) {
-                1 => CustomIcon::TROPHY_GOLD,
-                2 => CustomIcon::TROPHY_SILVER,
-                3 => CustomIcon::TROPHY_BRONZE,
-                default => throw new RuntimeException('Invalid place ' . $place)
-            };
-
-            $arena->broadcastMessage($icon . '§r§7- §b' . $playerName . ' - §e' . $value, true);
-        }
-
-        $arena->broadcastMessage('§e§l----------------------------', true);
-    }
-
-    public function save(Arena $arena): void
-    {
-        $typeId = $arena instanceof TypeArena ? $arena->getType() : -1;
-
-        if (count($this->stats) === 0) {
-            return;
-        }
-
-        /** @var array<string, array{key: string, value: int}> $playerStats */
-        $playerStats = [];
-        foreach (\pocketmine\utils\Utils::stringifyKeys($this->stats) as $xuid => $stats) {
-            $queryData = [];
-            $playerStats[$xuid] = [];
-            $savedKeys = [];
-
-            foreach ($stats as $id => $value) {
-                if (!$this->isSaveableStat($id)) {
-                    continue;
-                }
-
-                $columnName = $this->getColumnName($id, $typeId);
-                $queryData[self::DB_VALUE][] = $value;
-                $queryData[self::DB_COLUMN][] = $columnName . ' = ' . $columnName . ' + ?';
-
-                if (($key = $this->getKey($id)) !== null && !in_array($key, $savedKeys)) {
-                    $playerStats[$xuid][] = [
-                        "key" => $key,
-                        "value" => $value
-                    ];
-                    $savedKeys[] = $key;
-                }
-            }
-
-            $queryData[self::DB_VALUE][] = $xuid;
-
-            PlayerStats::createStats($xuid, static function () use ($queryData): void {
-                /* @phpstan-ignore-next-line */
-                MySQLCredentials::executeInsertRaw('UPDATE player_stats SET ' . implode(', ', $queryData[self::DB_COLUMN]) . ' WHERE xuid = ?;', $queryData[self::DB_VALUE]);
-            });
-        }
-
-        if (($api = getenv("CATALYST_URL")) !== false) {
-            Curl::postRequest($api . '/v1/ingest', [
-                "server_type" => strtolower($arena->getPlugin()->getMinigameTag()),
-                "game_id" => $arena->getReplayId(),
-                "game_type" => $this->mode,
-                "game_variation" => $this->types[$typeId] ?? '',
-                "time" => date('Y-m-d H:i:s', $arena->getStartTime()),
-                "players" => array_map(function (string $xuid, array $stats): array {
-                    return [
-                        "xuid" => $xuid,
-                        "stats" => $stats
-                    ];
-                }, array_keys($playerStats), $playerStats)
-            ]);
-        }
-
-        $this->saveTournament($arena, $typeId);
-    }
-
-    /**
-     * @pre $this->statsTypes[$id] !== null
-     */
-    private function getKey(int $id): ?string
-    {
-        /** @var string $columnName */
-        $columnName = $this->statTypes[$id];
-
-        $parts = explode('_', $columnName);
-        array_shift($parts); // remove the server type
-
-        if (count($parts) === 0) {
-            return null;
-        }
-
-        while (in_array($parts[0] ?? '', ['*type*', '*mode*'])) {
-            array_shift($parts);
-        }
-
-        return implode('_', $parts);
-    }
-
-    /**
-     * @pre $this->statsTypes[$id] exists
-     */
-    private function isSaveableStat(int $id): bool
-    {
-        return $this->statTypes[$id] !== null;
-    }
-
-    /**
-     * @pre $this->statsTypes[$id] !== null
-     */
-    private function getColumnName(int $id, int $typeId = -1): string
-    {
-        /** @var string $columnName */
-        $columnName = $this->statTypes[$id];
-
-        $columnName = str_replace('*mode*', $this->mode, $columnName);
-
-        if ($typeId !== -1) {
-            $columnName = str_replace('*type*', $this->types[$typeId] ?? 'unknown', $columnName);
-        }
-
-        return $columnName;
     }
 }

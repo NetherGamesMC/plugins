@@ -30,7 +30,9 @@ use libminigames\Minigame;
 use libminigames\Team;
 use libminigames\TeamArena;
 use libminigames\utils\BlockCollector;
+use libminigames\utils\RewardEntry;
 use NetherGames\NGEssentials\entity\custom\FloatingText;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use NetherGames\NGEssentials\utils\TextUtils;
@@ -121,7 +123,6 @@ class CQArena extends TeamArena
                         $player->teleport($this->getWorld()->getSpawnLocation());
                     } else {
                         $team->reconnectPlayer($player, false);
-                        $this->calculateXpBoost();
                     }
                 }
             }), 20);
@@ -189,7 +190,7 @@ class CQArena extends TeamArena
         $plugin = $this->getPlugin();
 
         if (
-            ($hit = $plugin->getEssentials()->getCombatLogger()->getLog($entity)->getLatestHit()) !== null &&
+            ($hit = NGEssentials::getInstance()->getCombatLogger()->getLog($entity)->getLatestHit()) !== null &&
             $hit->getTime() + 15 > time() &&
             ($damager = $plugin->getServer()->getPlayerExact($hit->getDamagerName())) !== null &&
             $this->isInArena($damager)
@@ -211,55 +212,40 @@ class CQArena extends TeamArena
         return $listener;
     }
 
-    public function addParticipation(Player $player, array $data = [], bool $guildXP = true): void
+    /**
+     * @param Player $player
+     * @return RewardEntry[]
+     */
+    public function getRewards(Player $player): array
     {
         $statsData = $this->getStatsData();
         $gameSummary = [];
+        $rewards = [];
 
         if (($flagsCaptured = $statsData->getValue($player, StatsData::CQ_FLAGS_CAPTURED)) > 0) {
             $gameSummary[] = CustomIcon::FLAG_RED . $flagsCaptured . ' Flag' . ($flagsCaptured > 1 ? 's' : '') . ' Captured';
             $tempFlagsCaptured = $statsData->getValue($player, StatsData::CQ_FLAGS_CAPTURED, true);
 
-            $data[self::DATA_XP][] = [
-                $flagsCaptured . ' Flag' . ($flagsCaptured > 1 ? 's' : '') . ' Captured',
-                $tempFlagsCaptured * 20
-            ];
-
-            $data[self::DATA_CREDITS][] = [
-                $flagsCaptured . ' Flag' . ($flagsCaptured > 1 ? 's' : '') . ' Captured',
-                $tempFlagsCaptured * 20
-            ];
+            $rewards[] = new RewardEntry('xp', $tempFlagsCaptured * 20, $flagsCaptured . ' Flag' . ($flagsCaptured > 1 ? 's' : '') . ' Captured');
+            $rewards[] = new RewardEntry('credits', $tempFlagsCaptured * 20, $flagsCaptured . ' Flag' . ($flagsCaptured > 1 ? 's' : '') . ' Captured');
         }
 
         if (($kills = $statsData->getValue($player, StatsData::CQ_KILLS)) > 0) {
             $gameSummary[] = CustomIcon::SWORD . $kills . ' Kill' . ($kills > 1 ? 's' : '');
             $tempKills = $statsData->getValue($player, StatsData::CQ_KILLS, true);
 
-            $data[self::DATA_XP][] = [
-                $kills . ' Kill' . ($kills > 1 ? 's' : ''),
-                $tempKills
-            ];
-
-            $data[self::DATA_CREDITS][] = [
-                $kills . ' Kill' . ($kills > 1 ? 's' : ''),
-                ($tempKills > 30 ? 30 : $tempKills) // Max 35 credits from kills
-            ];
+            $rewards[] = new RewardEntry('xp', $tempKills, $kills . ' Kill' . ($kills > 1 ? 's' : ''));
+            $rewards[] = new RewardEntry('credits', ($tempKills > 30 ? 30 : $tempKills), $kills . ' Kill' . ($kills > 1 ? 's' : '')); // Max 35 credits from kills
         }
 
         if ($kills > 0 || $flagsCaptured > 0) {
             $playtime = (int)floor((time() - $this->joinTimes[$player->getXuid()]) / 60);
             $playtime_reward = 2 * $playtime;
-            $data[self::DATA_XP][] = [
-                $playtime . ' Minute' . ($playtime > 1 ? 's' : '') . ' Playtime',
-                $playtime_reward
-            ];
+            $rewards[] = new RewardEntry('xp', $playtime_reward, $playtime . ' Minute' . ($playtime > 1 ? 's' : '') . ' Playtime');
         }
 
         if ($this->isWinner($player)) {
-            $data[self::DATA_CREDITS][] = [
-                'Win',
-                8
-            ];
+            $rewards[] = new RewardEntry('credits', 8, 'Win');
         }
 
         if (!empty($gameSummary)) {
@@ -270,7 +256,7 @@ class CQArena extends TeamArena
             }
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        return $rewards;
     }
 
     public function resetPlayer(Player $player): void
@@ -332,7 +318,7 @@ class CQArena extends TeamArena
         $statsData = $this->getStatsData();
         $statsData->addKill($player, $victim, StatsData::CQ_KILLS);
 
-        $combatLog = $this->getPlugin()->getEssentials()->getCombatLogger()->getLog($victim);
+        $combatLog = NGEssentials::getInstance()->getCombatLogger()->getLog($victim);
         foreach ($combatLog->getAssists() as $assist) {
             if (($playerAssist = $this->getPlugin()->getServer()->getPlayerExact($assist)) === null || $playerAssist === $player) {
                 continue;
@@ -375,7 +361,7 @@ class CQArena extends TeamArena
 
         $world = $this->getWorld();
         $leaderboards = $plugin->getLeaderboards();
-        $entityManager = $plugin->getEssentials()->getEntityManager();
+        $entityManager = NGEssentials::getInstance()->getEntityManager();
 
         [$title, $text] = $leaderboards->get('cq_wins');
         $entityManager->addEntity(new FloatingText(new Location(4.5, 63, 4.5, $world, 0.0, 0.0), $title, $text));
@@ -475,7 +461,6 @@ class CQArena extends TeamArena
 
     public function sendStats(): void
     {
-        $this->getStatsData()->sendLeaderboard($this, StatsData::CQ_KILLS, '§l§aTOP KILLERS');
     }
 
     public function startGame(): void

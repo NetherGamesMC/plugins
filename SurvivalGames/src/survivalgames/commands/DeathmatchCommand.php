@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace survivalgames\commands;
 
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
@@ -30,7 +31,7 @@ class DeathmatchCommand extends Command
     public function execute(CommandSender $sender, string $commandLabel, array $args): bool
     {
         if (!$sender instanceof Player) {
-            $sender->sendMessage($this->plugin->getEssentials()->getPrefix() . '§cThat command can only be run in-game.');
+            $sender->sendMessage(NGEssentials::getInstance()->getPrefix() . '§cThat command can only be run in-game.');
 
             return false;
         }

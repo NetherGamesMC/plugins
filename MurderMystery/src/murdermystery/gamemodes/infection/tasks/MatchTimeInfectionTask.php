@@ -28,6 +28,7 @@ use libminigames\tasks\MatchTimeTask;
 use murdermystery\gamemodes\infection\MMArenaInfection;
 use murdermystery\utils\Items;
 use murdermystery\utils\Utils;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\item\Bow;
 use pocketmine\item\Sword;
@@ -85,7 +86,7 @@ class MatchTimeInfectionTask extends MatchTimeTask
                     $this->getArena()->broadcastMessage(TextFormat::GREEN . 'Survivors' . TextFormat::YELLOW . ' have been revealed!', true);
 
                     foreach ($this->getArena()->getSurvivors() as $survivor) {
-                        $survivor->setNameTag($this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getNameTag($survivor, TextFormat::GREEN, true, true));
+                        $survivor->setNameTag(NGEssentials::getInstance()->getPlayerManager()->getNameTag($survivor, TextFormat::GREEN, true, true));
                     }
                 }
 

@@ -23,57 +23,24 @@ declare(strict_types=1);
 
 namespace libminigames\events;
 
-use libminigames\Arena;
 use libminigames\Minigame;
-use pocketmine\event\Cancellable;
-use pocketmine\event\CancellableTrait;
 use pocketmine\event\plugin\PluginEvent;
-use pocketmine\player\Player;
 
-class MinigameEvent extends PluginEvent implements Cancellable
+/**
+ * The base event for every event fired by libmingames.
+ */
+class MinigameEvent extends PluginEvent
 {
-    use CancellableTrait;
-
-    /** @var Player */
-    protected Player $player;
-    /** @var Arena */
-    private Arena $arena;
-    /** @var int */
-    private int $gameType;
-    /** @var int */
-    private int $gameId;
-
-    public function __construct(Player $player, Arena $arena, int $gameType, int $gameId)
+    public function __construct()
     {
-        $this->player = $player;
-        $this->arena = $arena;
-        $this->gameType = $gameType;
-        $this->gameId = $gameId;
         parent::__construct(Minigame::getInstance());
     }
 
-    /**
-     * Get the player for which this event was called.
-     *
-     * @return Player
-     */
-    public function getPlayer(): Player
+    public function getMinigame(): Minigame
     {
-        return $this->player;
-    }
+        /** @var Minigame $plugin */
+        $plugin = $this->getPlugin();
 
-    public function getGameId(): int
-    {
-        return $this->gameId;
-    }
-
-    public function getGameType(): int
-    {
-        return $this->gameType;
-    }
-
-    public function getArena(): Arena
-    {
-        return $this->arena;
+        return $plugin;
     }
 }

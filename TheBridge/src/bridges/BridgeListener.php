@@ -24,11 +24,11 @@ declare(strict_types=1);
 namespace bridges;
 
 use bridges\utils\InvMenuListenerUtils;
+use libminigames\events\player\PlayerLoginEvent;
 use libminigames\Minigame;
 use libminigames\MinigameListener;
 use muqsit\invmenu\inventory\InvMenuInventory;
 use NetherGames\NGEssentials\events\NGJoinEvent;
-use NetherGames\NGEssentials\events\NGLoginEvent;
 use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\PlayerData;
 use pocketmine\event\inventory\InventoryOpenEvent;
@@ -48,7 +48,7 @@ class BridgeListener extends MinigameListener
         if (!NGEssentials::isInDevelopmentMode()) {
             $player = $event->getPlayer();
             $plugin = $this->getPlugin();
-            $ess = $plugin->getEssentials();
+            $ess = NGEssentials::getInstance();
 
             if ($ess->getPlayerData()->getBool($player, PlayerData::RECONNECT)) {
                 $ess->getPlayerData()->setValue($player, PlayerData::RECONNECT, false);
@@ -83,18 +83,18 @@ class BridgeListener extends MinigameListener
     }
 
     /**
-     * @param NGLoginEvent $event
+     * @param PlayerLoginEvent $event
      *
      * @priority NORMAL
      */
-    public function onNGLogin(NGLoginEvent $event): void
+    public function onPlayerLogin(PlayerLoginEvent $event): void
     {
         if (!NGEssentials::isInDevelopmentMode()) {
             $player = $event->getPlayer();
-            $ess = $this->getPlugin()->getEssentials();
+            $ess = NGEssentials::getInstance();
 
             if (!$ess->getPlayerData()->getBool($player, PlayerData::RECONNECT)) {
-                parent::onNGLogin($event);
+                parent::onPlayerLogin($event);
             }
         }
     }

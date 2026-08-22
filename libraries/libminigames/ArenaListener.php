@@ -23,11 +23,10 @@ declare(strict_types=1);
 
 namespace libminigames;
 
-use libminigames\events\MinigameStartEvent;
+use libminigames\events\arena\ArenaStartEvent;
 use libminigames\utils\Forms;
 use libminigames\utils\Items;
 use libminigames\utils\TypeArena;
-use NetherGames\NGEssentials\events\NGChatEvent;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockBurnEvent;
 use pocketmine\event\block\BlockFormEvent;
@@ -58,6 +57,7 @@ use pocketmine\event\inventory\InventoryOpenEvent;
 use pocketmine\event\inventory\InventoryTransactionEvent;
 use pocketmine\event\player\PlayerBucketEmptyEvent;
 use pocketmine\event\player\PlayerChangeSkinEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerDropItemEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemConsumeEvent;
@@ -248,8 +248,26 @@ class ArenaListener
     {
     }
 
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
+    }
+
+    /**
+     * Cancels the given chat event and delivers its (already scoped) message to each recipient.
+     *
+     * <p>Scope-limited chat (team, dead, spectator) is sent this way so it never falls through to
+     * the network-wide chat pipeline.
+     *
+     * @param PlayerChatEvent $event
+     */
+    protected function dispatchScopedChat(PlayerChatEvent $event): void
+    {
+        $event->cancel();
+
+        $message = $event->getMessage();
+        foreach ($event->getRecipients() as $recipient) {
+            $recipient->sendMessage($message);
+        }
     }
 
     public function onPlayerDropItem(PlayerDropItemEvent $event): void
@@ -310,7 +328,7 @@ class ArenaListener
     {
     }
 
-    public function onMinigameStart(MinigameStartEvent $event): void
+    public function onArenaStart(ArenaStartEvent $event): void
     {
     }
 

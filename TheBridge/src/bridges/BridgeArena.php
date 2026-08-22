@@ -35,20 +35,22 @@ use libminigames\settings\GameSettings;
 use libminigames\tasks\CountDownTask;
 use libminigames\Team;
 use libminigames\TeamArena;
+use libminigames\utils\RewardEntry;
 use libminigames\utils\TypeArena;
 use libminigames\utils\TypeArenaTrait;
 use NetherGames\NGEssentials\entity\custom\FloatingText;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\cosmetics\CosmeticHandler;
 use NetherGames\NGEssentials\player\cosmetics\types\game\cage\CagesCosmetic;
 use NetherGames\NGEssentials\player\cosmetics\utils\Cage;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use NetherGames\NGEssentials\utils\TextUtils;
+use pocketmine\entity\Location;
 use pocketmine\block\BlockTypeIds;
 use pocketmine\block\StainedHardenedClay;
 use pocketmine\block\utils\DyeColor;
 use pocketmine\block\VanillaBlocks;
-use pocketmine\entity\Location;
 use pocketmine\math\Facing;
 use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
@@ -214,7 +216,7 @@ class BridgeArena extends TeamArena implements TypeArena
 
         $world = $this->getWorld();
         $leaderboards = $plugin->getLeaderboards();
-        $entityManager = $plugin->getEssentials()->getEntityManager();
+        $entityManager = NGEssentials::getInstance()->getEntityManager();
 
         [$title, $text] = $leaderboards->get('tb_*mode*_wins', $this->getModeId());
         $entityManager->addEntity(new FloatingText(new Location(3.5, 61, 3.5, $world, 0.0, 0.0), $title, $text));
@@ -460,7 +462,6 @@ class BridgeArena extends TeamArena implements TypeArena
 
     public function sendStats(): void
     {
-        $this->getStatsData()->sendLeaderboard($this, StatsData::TB_GOALS, '§l§aTOP SCORERS');
     }
 
     public function getBuildHeight(): int
@@ -478,7 +479,7 @@ class BridgeArena extends TeamArena implements TypeArena
 
         $this->playKillCosmetics($player);
 
-        $combatLog = $this->getPlugin()->getEssentials()->getCombatLogger()->getLog($victim);
+        $combatLog = NGEssentials::getInstance()->getCombatLogger()->getLog($victim);
         foreach ($combatLog->getAssists() as $assist) {
             if (($playerAssist = $this->getPlugin()->getServer()->getPlayerExact($assist)) === null || $playerAssist === $player) {
                 continue;
@@ -497,8 +498,13 @@ class BridgeArena extends TeamArena implements TypeArena
         $this->getScoreboard()->setLine([$player], 6, CustomIcon::TARGET . TextFormat::GREEN . $statsData->getValue($player, StatsData::TB_GOALS));
     }
 
-    public function addParticipation(Player $player, array $data, bool $guildXP = true): void
+    /**
+     * @param Player $player
+     * @return RewardEntry[]
+     */
+    public function getRewards(Player $player): array
     {
+        $rewards = [];
         $statsData = $this->getStatsData();
 
         /** @var BridgeTeam|null $team */
@@ -510,51 +516,37 @@ class BridgeArena extends TeamArena implements TypeArena
         $perfect = $team->getScore() >= $this->goalLimit && $opponent->getScore() === 0 && !$this->hasSamePartyOpponents($player) && !$this->ranOutOfTime;
 
         if (($goals = $statsData->getValue($player, StatsData::TB_GOALS)) > 0) {
-            $data[self::DATA_XP][] = [
-                $goals . ' Goal' . ($goals > 1 ? 's' : ''),
-                $goals * 3
-            ];
+            $goalLabel = $goals . ' Goal' . ($goals > 1 ? 's' : '');
 
-            $data[self::DATA_CREDITS][] = [
-                $goals . ' Goal' . ($goals > 1 ? 's' : ''),
-                $goals * (match ($modeId) {
-                    self::MODE_SOLO => 2,
-                    self::MODE_DOUBLES => 4,
-                    default => 2
-                })
-            ];
+            $rewards[] = new RewardEntry('xp', $goals * 3, $goalLabel);
+            $rewards[] = new RewardEntry('credits', $goals * (match ($modeId) {
+                self::MODE_SOLO => 2,
+                self::MODE_DOUBLES => 4,
+                default => 2
+            }), $goalLabel);
 
             if ($perfect) {
-                $data[self::DATA_XP][] = [
-                    'Perfect Game',
-                    3
-                ];
+                $rewards[] = new RewardEntry('xp', 3, 'Perfect Game');
             }
         }
 
         if ($this->isWinner($player)) {
             if ($perfect) {
-                $data[self::DATA_CREDITS][] = [
-                    'Perfect Game',
-                    (match ($modeId) {
-                        self::MODE_SOLO => 8,
-                        self::MODE_DOUBLES => 11,
-                        default => 8
-                    })
-                ];
+                $rewards[] = new RewardEntry('credits', match ($modeId) {
+                    self::MODE_SOLO => 8,
+                    self::MODE_DOUBLES => 11,
+                    default => 8
+                }, 'Perfect Game');
             } else {
-                $data[self::DATA_CREDITS][] = [
-                    'Win',
-                    (match ($modeId) {
-                        self::MODE_SOLO => 4,
-                        self::MODE_DOUBLES => 8,
-                        default => 4
-                    })
-                ];
+                $rewards[] = new RewardEntry('credits', match ($modeId) {
+                    self::MODE_SOLO => 4,
+                    self::MODE_DOUBLES => 8,
+                    default => 4
+                }, 'Win');
             }
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        return $rewards;
     }
 
     /**

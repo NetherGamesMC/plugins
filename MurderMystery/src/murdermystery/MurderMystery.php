@@ -74,11 +74,6 @@ class MurderMystery extends Minigame
         MMKnife::setup();
     }
 
-    public function getMinigameTag(): string
-    {
-        return ServerManager::MM;
-    }
-
     public function getModes(): array
     {
         return [

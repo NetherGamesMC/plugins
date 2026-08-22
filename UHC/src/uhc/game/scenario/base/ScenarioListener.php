@@ -2,7 +2,7 @@
 
 namespace uhc\game\scenario\base;
 
-use libminigames\events\MinigameStartEvent;
+use libminigames\events\arena\ArenaStartEvent;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\inventory\CraftItemEvent;
@@ -22,7 +22,7 @@ class ScenarioListener
     {
     }
 
-    public function onMinigameStart(MinigameStartEvent $event): void
+    public function onArenaStart(ArenaStartEvent $event): void
     {
     }
 

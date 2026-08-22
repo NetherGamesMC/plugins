@@ -147,7 +147,7 @@ final class Upgrader
 
         $tier = $upgrade->getTier($level) ?? throw new AssumptionFailedError("Tier should exist");
         $name = $tier->customName ?: ("$upgrade->name " . ($upgrade->hasTiers() ? Utils::getRomanNumber($level) : ""));
-        $team->broadcastMessage(TextFormat::GREEN . $team->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($player) . " purchased " . TextFormat::GOLD . $name);
+        $team->broadcastMessage(TextFormat::GREEN . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($player) . " purchased " . TextFormat::GOLD . $name);
 
         foreach ($team->getAlivePlayers() as $alivePlayer) {
             /** @var NGPlayer $alivePlayer */

@@ -24,7 +24,6 @@ declare(strict_types=1);
 
 namespace libminigames\utils;
 
-use NetherGames\NGEssentials\thread\NGThreadPool;
 use pmmp\thread\Thread as NativeThread;
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\Server;
@@ -45,11 +44,6 @@ class Autoloader extends AsyncTask
 
             if (NativeThread::getCurrentThread() === null) { // check if we are in the main thread
                 $serverPool = Server::getInstance()->getAsyncPool();
-                $serverPool->addWorkerStartHook(function (int $workerId) use ($bootstrap, $serverPool): void {
-                    $serverPool->submitTaskToWorker(new Autoloader($bootstrap), $workerId);
-                });
-
-                $serverPool = NGThreadPool::getInstance();
                 $serverPool->addWorkerStartHook(function (int $workerId) use ($bootstrap, $serverPool): void {
                     $serverPool->submitTaskToWorker(new Autoloader($bootstrap), $workerId);
                 });

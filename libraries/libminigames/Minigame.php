@@ -25,20 +25,19 @@ namespace libminigames;
 
 use libasyncio\FileDeleteAsyncTask;
 use libminigames\commands\RequeueCommand;
-use libminigames\events\MinigameJoinEvent;
+use libminigames\events\arena\ArenaCleanupEvent;
+use libminigames\events\player\PlayerCreatePrivateGameEvent;
+use libminigames\events\player\PlayerJoinEvent;
+use libminigames\events\player\PlayerQuitEvent;
+use libminigames\events\player\PlayerRequeueEvent;
+use libminigames\session\GameSession;
+use libminigames\session\GameSessionListener;
 use libminigames\utils\ArenaConfig;
+use libminigames\utils\Icon;
 use libminigames\utils\generators\VoidGenerator;
-use libReplay\session\record\RecordManager;
-use NetherGames\NGEssentials\NGEssentials;
-use NetherGames\NGEssentials\player\NGPlayer;
-use NetherGames\NGEssentials\player\permissions\Permissions;
-use NetherGames\NGEssentials\player\PlayerData;
-use NetherGames\NGEssentials\ServerManager;
-use NetherGames\NGEssentials\thread\NGThreadPool;
-use NetherGames\NGEssentials\utils\CustomIcon;
-use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
+use pocketmine\Server;
 use pocketmine\utils\Filesystem;
 use pocketmine\utils\TextFormat;
 use pocketmine\world\generator\GeneratorManager;
@@ -49,32 +48,22 @@ use function array_filter;
 use function array_key_first;
 use function array_key_last;
 use function array_merge;
-use function array_rand;
 use function array_search;
 use function count;
 use function explode;
 use function glob;
 use function in_array;
+use function max;
 use function str_replace;
+use function strtolower;
 use const GLOB_ONLYDIR;
 
 /**
- * A minigame service for the NetherGamesMC production server. This
- * is made abstract so that developers can extend this class, as well
- * as manage and monitor gamemodes easily.
+ * A generic minigame engine that can be extended by any minigame plugin.
  *
- * <p>A <code>Minigame<code> provides a: replay system, join and leave system,
- * queuing system and arena management system. This class is intended to
- * provide basic information about the game that is currently running.
- *
- * <p>In addition to execution and life-cycle control methods, this method
- * creates an arena and destroys them after they are no longer in use
- * which are {@link Minigame::getArenas()} that are intended to aid in managing,
- * creating and monitoring arenas.
- *
- * <p>On the other hand, methods like total players count and arena lifetime length
- * can be hardcoded by their respective classes, no configurations are required for these
- * config.
+ * <p>This class deliberately holds no NetherGames-specific behavior. Decisions that used to be
+ * handled internally (rewards, parties, matchmaking, economy, ...) are now exposed as events which
+ * any external module can subscribe to.
  *
  * @package libminigames
  */
@@ -96,8 +85,6 @@ abstract class Minigame extends PluginBase
     protected int $mapsPlayed = 0; // Increment this value every new arenas being constructed.
     /** @var bool */
     protected bool $replaySystemStatus = self::REPLAY_SYSTEM_STATUS_ON;
-    /** @var NGEssentials */
-    private NGEssentials $ess;
 
     /**
      * Returns NG replay status system, if you want to disable this feature, please do so
@@ -123,8 +110,7 @@ abstract class Minigame extends PluginBase
     }
 
     /**
-     * Specifies the available modes for this game, under production server,
-     * only one mode will be chosen (As seen in lobby if you have played it before)
+     * Specifies the available modes for this game.
      *
      * <p>This snippet below will show you how to properly override this method.
      * <code>
@@ -138,12 +124,7 @@ abstract class Minigame extends PluginBase
      *    }
      * </code>
      *
-     * <p>As seen in this code, only 2 mode appears to be registered, though you can attempt
-     * to register more modes and provide your own constant values. This mode will be used to multiply
-     * the amount of players needed in an arena, <code>$mode * 4</code>, where 4 is is the maximum players
-     * required in arena per modes.
-     *
-     * <p>String value returned are used in scoreboard.
+     * <p>String values returned are used in scoreboards.
      *
      * @return string[]
      */
@@ -155,8 +136,7 @@ abstract class Minigame extends PluginBase
      * crashes.
      *
      * <p>Until it has successfully being enabled, it will then call {@link Minigame::registerClasses()}
-     * where you can register your arena listeners and config where appropriate,
-     * just like how you want it to be in both onload or onEnable functions.
+     * where you can register your arena listeners and config where appropriate.
      */
     public function onEnable(): void
     {
@@ -204,18 +184,12 @@ abstract class Minigame extends PluginBase
             }
         }
 
-        $ess = $this->getServer()->getPluginManager()->getPlugin('NGEssentials');
-        if ($ess instanceof NGEssentials) {
-            $this->ess = $ess;
+        $this->registerClasses();
 
-            $this->registerClasses();
+        $this->getServer()->getPluginManager()->registerEvents(new GameSessionListener(), $this);
+        $this->getServer()->getCommandMap()->register('requeue', new RequeueCommand($this));
 
-            $this->getServer()->getCommandMap()->register('requeue', new RequeueCommand($this));
-
-            $this->getLogger()->info('§2' . $this->getDescription()->getName() . ' successfully enabled!');
-        } else {
-            $this->getServer()->shutdown();
-        }
+        $this->getLogger()->info('§2' . $this->getDescription()->getName() . ' successfully enabled!');
     }
 
     public function enableVoidGenerator(): bool
@@ -243,11 +217,8 @@ abstract class Minigame extends PluginBase
     }
 
     /**
-     * Initializes methods that are needed such as listeners which is {@see MinigameListener},
-     * config files or anything appropriate, just like how you handle {@see PluginBase::onEnable()}.
-     *
-     * <p>This function also being used to register leaderboards, {@see LeaderboardData::load()},
-     * if this arena has a death and kills scores.
+     * Initializes methods that are needed such as listeners, config files or anything
+     * appropriate, just like how you handle {@see PluginBase::onEnable()}.
      */
     abstract public function registerClasses(): void;
 
@@ -260,10 +231,10 @@ abstract class Minigame extends PluginBase
             $mapTag = $this->getArenaConfig()->getTag($mapName);
 
             return $mapDisplayName . match ($mapTag) {
-                    ArenaConfig::TAG_WINTER => ' ' . CustomIcon::CHRISTMAS_HAT,
-                    ArenaConfig::TAG_HALLOWEEN => ' ' . CustomIcon::PUMPKIN,
-                    ArenaConfig::TAG_NEW => ' ' . CustomIcon::NEW,
-                    ArenaConfig::TAG_SUMMER => ' ' . CustomIcon::SUN,
+                    ArenaConfig::TAG_WINTER => ' ' . Icon::get('tag.winter'),
+                    ArenaConfig::TAG_HALLOWEEN => ' ' . Icon::get('tag.halloween'),
+                    ArenaConfig::TAG_NEW => ' ' . Icon::get('tag.new'),
+                    ArenaConfig::TAG_SUMMER => ' ' . Icon::get('tag.summer'),
                     default => ''
                 };
         }
@@ -280,76 +251,44 @@ abstract class Minigame extends PluginBase
     abstract public function getArenaConfig(): ArenaConfig;
 
     /**
-     * This method is considered as internal use, attempt to not use this function regardless of any
-     * consequences.
+     * Attempts to join a player to an available arena.
+     *
+     * <p>The engine does not compute group sizes on its own. Callers that know the number of
+     * players queueing together (e.g. a party) must pass it explicitly in <code>$size</code>;
+     * standalone single-player queues use the default of <code>1</code>.
      *
      * @param Player $player The player requested to join this arena.
-     * @param int $modeId The mode of the arena requested, as seen in {@link Minigame::getModes()}
+     * @param int $modeId The mode of the arena requested, as seen in {@link Minigame::getModes()}.
+     * @param int $size The authoritative amount of players that are queuing together (e.g. a party).
      * @return bool The value indicates that the player has successfully joined to their requested arena.
      */
-    final public function joinArena(Player $player, int $modeId = -1): bool
+    final public function joinArena(Player $player, int $modeId = -1, int $size = 1): bool
     {
-        /** @var NGPlayer $player */
-        $ess = $this->getEssentials();
-        $playerManager = $ess->getPlayerManager();
-        $partyManager = $playerManager->getSocialManager()->getPartyManager();
-
         if ($this->getArena($player) !== null) {
             $player->sendMessage('§cYou\'re already in a ' . $this->getMinigameName() . ' match!');
             return false;
         }
 
-        if ($ess->getPlayerData()->getBool($player, PlayerData::TRACK)) {
-            $player->sendMessage(TextFormat::RED . "You're currently in tracking mode. Leave to join a game.");
+        if ($modeId === -1) {
+            $key = array_key_first($this->getModes());
+
+            if ($key === null) {
+                $player->sendMessage(TextFormat::RED . "Something went wrong.");
+                return false;
+            }
+
+            /** @var int $modeId */
+            $modeId = (int)$key;
+        }
+
+        $arena = $this->getFreeArena($modeId, $size);
+
+        if ($arena === null) {
+            $player->sendMessage(TextFormat::RED . "Could not join that game right now.");
             return false;
         }
 
-        $size = $this->getQueueSize($player);
-
-        if ($modeId === -1) {
-            if (($gameType = $ess->getServerManager()->getGameType()) === '') {
-                /** @var int|null $key */
-                $key = array_key_first($this->getModes());
-
-                if ($key === null) {
-                    $player->sendMessage(TextFormat::RED . "Something went wrong.");
-                    return false;
-                }
-
-                $modeId = $key;
-            } else {
-                $modeId = $this->getModeId($gameType);
-            }
-        }
-
-        if (($party = $partyManager->getParty($player)) !== null && $party->hasPrivateGames()) {
-            $arena = $this->generateNewArena($modeId, true);
-
-            $this->arenas[$arena->getId()] = $arena;
-        } else {
-            $arena = $this->getFreeArena($modeId, $size, $ess->getServerManager()->getQueuingMode($player));
-
-            if ( // If either one of the following conditions are met, the player will be transferred back to the lobby
-                $arena === null ||
-                ($party !== null && $arena instanceof TeamArena &&
-                    ( // This will happen because a party has too many players than allowed to join a game
-                        ($arena->getTeamSize() < $party->getTotalMembers() && $arena->getMaxSize() !== $party->getTotalMembers()) || // Party is too big to join the team and party size is not equal to the max arena size
-                        (!$player->hasPermission(Permissions::RANK_LEGEND) && $party->getTotalMembers() > $arena->getMaxSize()) // Player doesn't have legend rank (private games access) and there are more party members than how many can join the arena
-                    )
-                )
-            ) {
-                $player->sendToastNotification(TextFormat::RED . "Could not join!", TextFormat::RED . "Your party is too big to join this game.");
-                $player->sendMessage(TextFormat::YELLOW . match ($player->hasPermission(Permissions::RANK_LEGEND)) {
-                        true => "Create a private game if you want to play with your full party.",
-                        default => "You can buy a §l§bLEGEND §r" . TextFormat::YELLOW . "rank to create a private game and play with your full party."
-                    });
-
-                $playerManager->transferPlayer($player);
-                return false;
-            }
-        }
-
-        $event = new MinigameJoinEvent($player, $arena, $modeId, $arena->getId());
+        $event = new PlayerJoinEvent($player, $arena, $modeId);
         $event->call();
 
         if (!$event->isCancelled()) {
@@ -357,11 +296,6 @@ abstract class Minigame extends PluginBase
         }
 
         return false;
-    }
-
-    final public function getEssentials(): NGEssentials
-    {
-        return $this->ess;
     }
 
     /**
@@ -410,41 +344,30 @@ abstract class Minigame extends PluginBase
     }
 
     /**
+     * The full display name of the game. This is configurable via the <code>name</code>
+     * key in the plugin config.
+     *
      * @return string
      */
     final public function getMinigameName(): string
     {
-        return ServerManager::getName($this->getMinigameTag());
+        $name = $this->getConfig()->get('name', '');
+
+        return is_string($name) && $name !== '' ? $name : $this->getDescription()->getName();
     }
 
     /**
      * The name of the game, full name if it is possible. This name will be used
-     * for your command label and arena world filename.
+     * for your command label and arena world filename. This is read from the <code>tag</code>
+     * key in the plugin config.
      *
      * @return string
      */
     public function getMinigameTag(): string
     {
-        return $this->getEssentials()->getServerManager()->getServerType();
-    }
+        $tag = $this->getConfig()->get('tag', '');
 
-    /**
-     * @param Player $player
-     * @return int The amount of players in their party.
-     *
-     * @internal
-     */
-    public function getQueueSize(Player $player): int
-    {
-        $partyManager = $this->getEssentials()->getPlayerManager()->getSocialManager()->getPartyManager();
-
-        if (($party = $partyManager->getParty($player)) !== null) {
-            $size = count($party->getAll());
-        } else {
-            $size = 1;
-        }
-
-        return $size;
+        return is_string($tag) && $tag !== '' ? strtolower($tag) : strtolower($this->getDescription()->getName());
     }
 
     /**
@@ -453,40 +376,17 @@ abstract class Minigame extends PluginBase
      * @param Player $player The player to requeue
      * @param Arena $arena The arena the player is currently in
      * @param string $mode The game mode to requeue into
+     * @param int $size The amount of players that are requeueing together (e.g. a party).
      */
-    final public function requeuePlayer(Player $player, Arena $arena, string $mode): void
+    final public function requeuePlayer(Player $player, Arena $arena, string $mode, int $size = 1): void
     {
-        /** @var NGPlayer $player */
-        $arena->removePlayer($player, events\MinigameQuitEvent::END, true, false);
+        $arena->removePlayer($player, PlayerQuitEvent::END, true, false);
 
-        if ($this->isStandAloneGame()) {
-            $ess = $this->getEssentials();
-            $playerManager = $ess->getPlayerManager();
-            $serverManager = $ess->getServerManager();
+        $event = new PlayerRequeueEvent($player, $arena, $mode, $size);
+        $event->call();
 
-            if (($gameType = $serverManager->getGameType()) === '' || $gameType === $mode) {
-                $onMatchmakingFailure = function () use ($player): void {
-                    if ($player->isConnected()) {
-                        $this->joinArena($player);
-                    }
-                };
-
-                if ($this->canJoinArena($player, $this->getModeId($mode)) || !$playerManager->transferPlayer($player, $serverManager->getServerType(), $serverManager->getGameType(), true, $onMatchmakingFailure)) {
-                    $onMatchmakingFailure();
-                }
-            } else {
-                $onMatchmakingFailure = static function () use ($playerManager, $player): void {
-                    if ($player->isConnected()) {
-                        $playerManager->transferPlayer($player);
-                    }
-                };
-
-                if (!$playerManager->transferPlayer($player, $serverManager->getServerType(), $mode, true, $onMatchmakingFailure)) {
-                    $onMatchmakingFailure();
-                }
-            }
-        } else {
-            $this->joinArena($player, $this->getModeId($mode));
+        if (!$event->isCancelled()) {
+            $this->joinArena($player, $this->getModeId($mode), $event->getSize());
         }
     }
 
@@ -506,38 +406,20 @@ abstract class Minigame extends PluginBase
     abstract public function generateNewArena(int $modeId, bool $privateGame = false): Arena;
 
     /**
-     * Get an available arena based on a queueing type given in variable <code>$queuingType</code>,
-     * this call will attempt to iterate all possible arenas that is waiting. Only the first result
-     * of an arena will be returned. However, if there is no possible arena is available, a new
-     * arena will be created.
-     *
-     * <p>Queuing-specific, a technique introduced by NetherGamesMC developers to allow only to a specific
-     * targeted players such as mobile users, to improve PVP against desktop users.
-     *
-     * Constant values below are the only values for <code>$queuingType</code>.
-     * <code>
-     *  // Prefer normal queueing, which desktop users and mobile users will
-     *  // be joined in this game.
-     *  public const QUEUING_GLOBAL = 0;
-     *  public const QUEUING_PREFER_MOBILE = 1;
-     *
-     *  // Force mobile users, desktop users will not be allowed to join this arena
-     *  public const QUEUING_FORCE_MOBILE = 2;
-     * </code>
-     *
-     * <p><em>However, this method implies that most of its use are used internally.</em>
+     * Get an available arena based on the given size, this call will attempt to iterate all
+     * possible arenas that are waiting. Only the first result of an arena will be returned.
+     * However, if there is no possible arena is available, a new arena will be created.
      *
      * @param int $modeId The specific mode set in {@link Minigame::getModes()}
-     * @param int $size The size of a player party.
-     * @param string $queuingType The type of a queue.
-     * @return Arena|null Returns null when the size exceeds the maximum size of the arena.
+     * @param int $size The size of a player group that wants to join.
+     * @return Arena|null Returns null when the size exceeds the maximum size of an arena.
      */
-    public function getFreeArena(int $modeId, int $size, string $queuingType): ?Arena
+    public function getFreeArena(int $modeId, int $size): ?Arena
     {
         $bestArena = null;
         $playerCount = 0;
 
-        foreach ($this->getQueuingArenas($modeId, $queuingType) as $arena) {
+        foreach ($this->getQueuingArenas($modeId) as $arena) {
             if ($arena->getSize() >= $size && $playerCount <= ($arenaCount = count($arena->getPlayers(false)))) {
                 $bestArena = $arena;
                 $playerCount = $arenaCount;
@@ -553,9 +435,6 @@ abstract class Minigame extends PluginBase
 
             $this->arenas[$arena->getId()] = $arena;
 
-            if ($this->isStandAloneGame()) {
-                $this->updateQueuing($modeId);
-            }
             return $arena;
         }
 
@@ -564,65 +443,35 @@ abstract class Minigame extends PluginBase
 
     /**
      * Queries an arena that is ready to receive queued players.
-     * Unlike {@link generateNewArena()}, this function reuses the arena that has recently being created.
      *
      * @param int $modeId The specific mode of a game, {@see Minigame::getModes()}
-     * @param string $queuingMode The type of queue. {@see Minigame::getFreeArena()}
      * @return Arena[]
      */
-    public function getQueuingArenas(int $modeId, string $queuingMode = self::QUEUING_GLOBAL): array
+    public function getQueuingArenas(int $modeId): array
     {
         $queuingArenas = [];
-        $queuingMobileArenas = [];
 
         foreach ($this->getArenas($modeId) as $arena) {
             if (!$arena->isFull() && $arena->isWaiting()) {
-                if ($arena->isTouchOnly()) {
-                    if ($queuingMode === self::QUEUING_PREFER_MOBILE) {
-                        $queuingMobileArenas[] = $arena;
-                    } elseif ($queuingMode === self::QUEUING_FORCE_MOBILE) {
-                        $queuingArenas[] = $arena;
-                    }
-                } elseif ($queuingMode !== self::QUEUING_FORCE_MOBILE) {
-                    $queuingArenas[] = $arena;
-                }
+                $queuingArenas[] = $arena;
             }
         }
 
-        return array_merge($queuingMobileArenas, $queuingArenas);
+        return $queuingArenas;
     }
 
     /**
-     * Allow hub queuing for the match, hub queuing allows players to teleports
+     * Allow hub queuing for the match, hub queuing allows players to teleport
      * to the server's lobby after the match has finished/completed.
+     *
+     * <p>This value is read from the <code>standalone</code> key in the plugin's config,
+     * defaulting to <code>true</code>.
      *
      * @return bool
      */
     public function isStandAloneGame(): bool
     {
-        return $this->getEssentials()->getServerManager()->getGameType() !== '';
-    }
-
-    public function updateQueuing(int $modeId): void
-    {
-        if (!$this->isStandAloneGame()) {
-            return;
-        }
-
-        $queuingArenas = [];
-        $queuingMobileArenas = [];
-
-        foreach ($this->getArenas($modeId) as $arena) {
-            if ($arena->isWaiting() && count($arena->getPlayers(false)) < 0.7 * $arena->getMaxSize()) {
-                if ($arena->isTouchOnly()) {
-                    $queuingMobileArenas[] = $arena;
-                } else {
-                    $queuingArenas[] = $arena;
-                }
-            }
-        }
-
-        $this->getEssentials()->getServerManager()->setQueuing(count($queuingArenas) !== 0, count($queuingMobileArenas) !== 0);
+        return (bool)$this->getConfig()->get('standalone', true);
     }
 
     /**
@@ -652,222 +501,15 @@ abstract class Minigame extends PluginBase
         return false;
     }
 
-    public function canJoinArena(NGPlayer $player, int $modeId): bool
+    public function canJoinArena(int $size, int $modeId): bool
     {
-        $queuingType = $this->getEssentials()->getServerManager()->getQueuingMode($player);
-        $size = $this->getQueueSize($player);
-
-        foreach ($this->getQueuingArenas($modeId, $queuingType) as $arena) {
+        foreach ($this->getQueuingArenas($modeId) as $arena) {
             if ($arena->getSize() >= $size) {
                 return true;
             }
         }
 
         return false;
-    }
-
-    /**
-     * You know this is right?
-     *
-     * @param int $cause An {@link EntityDamageEvent::getCause()} cause id.
-     * @param bool $tagged Indicate that this event has a damager caused by other player.
-     * @return string Your random generated kill message.
-     */
-    final public function getRandomKillMessage(int $cause, bool $tagged = false): string
-    {
-        switch ($cause) {
-            case EntityDamageEvent::CAUSE_ENTITY_ATTACK:
-                $messages = [
-                    '{PLAYER} §r§7was killed by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was struck down by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was turned to dust by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was turned to ash by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was melted by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was filled full of lead by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7met their end by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7died in combat with {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7fell to the great marksmanship of {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was given the cold shoulder by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was out of the league of {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was no match for {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was glazed in BBQ sauce by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was not spicy enough for {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was wrapped into a gift for {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was put on the naughty list by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was turned into gingerbread by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was bit by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7be sent to Davy Jones\' locker by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7be killed by magic by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was spooked by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was totally spooked by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was tragically backstabbed by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was heartlessly let go by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was rekt by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7took the L to {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7got roasted by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was smacked by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was bested by {DAMAGER}§r§7.'
-                ];
-                break;
-            case EntityDamageEvent::CAUSE_PROJECTILE:
-                $messages = [
-                    '{PLAYER} §r§7was killed by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was struck down by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was turned to dust by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was turned to ash by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was melted by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was filled full of lead by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7met their end by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7died in combat with {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7fell to the great marksmanship of {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was given the cold shoulder by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was out of the league of {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was no match for {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was glazed in BBQ sauce by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was not spicy enough for {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was wrapped into a gift for {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was put on the naughty list by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was turned into gingerbread by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was bit by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7be sent to Davy Jones\' locker by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7be killed by magic by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was spooked by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was totally spooked by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was tragically backstabbed by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was heartlessly let go by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was rekt by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7took the L to {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7got roasted by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was smacked by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was bested by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was shot by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was thrown chilli powder at by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7caught the ball thrown by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was shot and killed by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7be killed with metal by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7was remotely spooked by {DAMAGER}§r§7.',
-                    '{PLAYER} §r§7heart was pierced by {DAMAGER}§r§7.'
-                ];
-                break;
-            case EntityDamageEvent::CAUSE_FALL:
-                if ($tagged) {
-                    $messages = [
-                        '{PLAYER} §r§7was knocked off a cliff by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was turned to dust by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was turned to ash by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7met their end by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7fought to the edge with {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7fell to the great marksmanship of {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7stumbled off a ledge with the help of {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was given the cold shoulder by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was out of the league of {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7slipped in BBQ sauce off the edge spilled by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7hit the hard wood floor because of {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was pushed down a slope by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was turned into gingerbread by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was spooked off the map by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was heartlessly let go by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was rekt by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7took the L to {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7got roasted by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was smacked by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was bested by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was knocked off the edge by {DAMAGER}§r§7.'
-                    ];
-                } else {
-                    $messages = [
-                        '{PLAYER} §r§7fell to their death.',
-                        '{PLAYER} §r§7fell off a cliff.',
-                        '{PLAYER} §r§7was turned to dust.',
-                        '{PLAYER} §r§7was turned to ash.',
-                        '{PLAYER} §r§7stumbled off a ledge.',
-                        '{PLAYER} §r§7slipped in BBQ sauce off the edge.',
-                        '{PLAYER} §r§7hit the hard wood floor.'
-                    ];
-                }
-                break;
-            case EntityDamageEvent::CAUSE_VOID:
-                if ($tagged) {
-                    $messages = [
-                        '{PLAYER} §r§7was knocked into the void by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was knocked off a cliff by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was turned to dust by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was turned to ash by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7met their end by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7fought to the edge with {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7fell to the great marksmanship of {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7stumbled off a ledge with the help of {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was given the cold shoulder by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was out of the league of {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7slipped in BBQ sauce off the edge spilled by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was pushed down a slope by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was turned into gingerbread by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7howled into the void for {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was cannonballed to death by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was spooked off the map by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was heartlessly let go by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was delivered into nothingness by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was rekt by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7took the L to {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7got roasted by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was smacked by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was bested by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was knocked off the edge by {DAMAGER}§r§7.'
-                    ];
-                } else {
-                    $messages = [
-                        '{PLAYER} §r§7fell to their death.',
-                        '{PLAYER} §r§7fell into the void.',
-                        '{PLAYER} §r§7fell off a cliff.',
-                        '{PLAYER} §r§7was turned to dust.',
-                        '{PLAYER} §r§7was turned to ash.',
-                        '{PLAYER} §r§7stumbled off a ledge.',
-                        '{PLAYER} §r§7slipped in BBQ sauce off the edge.',
-                        '{PLAYER} §r§7howled into the void.',
-                        '{PLAYER} §r§7fell into nothingness.'
-                    ];
-                }
-                break;
-            case EntityDamageEvent::CAUSE_LAVA:
-                if ($tagged) {
-                    $messages = [
-                        '{PLAYER} §r§7was turned to dust by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was turned to ash by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was melted by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7met their end by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7fell to the great marksmanship of {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7stumbled off a ledge with the help of {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was given the cold shoulder by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was out of the league of {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7slipped in BBQ sauce off the edge spilled by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was turned into gingerbread by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was cannonballed to death by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was heartlessly let go by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was rekt by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7took the L to {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7got roasted by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was smacked by {DAMAGER}§r§7.',
-                        '{PLAYER} §r§7was bested by {DAMAGER}§r§7.'
-                    ];
-                } else {
-                    $messages = [
-                        '{PLAYER} §r§7fell to their death.',
-                        '{PLAYER} §r§7fell off a cliff.',
-                        '{PLAYER} §r§7was turned to dust.',
-                        '{PLAYER} §r§7was turned to ash.',
-                        '{PLAYER} §r§7stumbled off a ledge.',
-                        '{PLAYER} §r§7slipped in BBQ sauce off the edge.'
-                    ];
-                }
-                break;
-            default:
-                $messages = [
-                    '{PLAYER} §r§7died.'
-                ];
-                break;
-        }
-
-        return $messages[array_rand($messages)];
     }
 
     /**
@@ -893,19 +535,16 @@ abstract class Minigame extends PluginBase
             }
         }
 
+        (new ArenaCleanupEvent($arena))->call();
+
         $worldManager = $this->getServer()->getWorldManager();
 
         if (($world = $worldManager->getWorldByName($worldName = $arena->getMatchWorldName())) !== null) {
-            if (($recordManager = RecordManager::getInstance()) !== null) {
-                $recordManager->stopRecording($world, $arena->getStatus() === Arena::STATUS_FINISHING);
-            }
-            $this->getEssentials()->getEntityManager()->removeEntities($world);
-
             $world->setAutoSave(false);
             $worldManager->unloadWorld($world);
         }
 
-        NGThreadPool::getInstance()->submitTask(new FileDeleteAsyncTask(Path::join($this->getServer()->getDataPath(), 'worlds', $worldName)));
+        Server::getInstance()->getAsyncPool()->submitTask(new FileDeleteAsyncTask(Path::join($this->getServer()->getDataPath(), 'worlds', $worldName)));
     }
 
     final public function removeWaitingLobby(Arena $arena): void
@@ -913,11 +552,36 @@ abstract class Minigame extends PluginBase
         $worldManager = $this->getServer()->getWorldManager();
 
         if (($world = $worldManager->getWorldByName($worldName = $arena->getWaitingLobbyWorldName())) !== null) {
-            $this->getEssentials()->getEntityManager()->removeEntities($world);
             $worldManager->unloadWorld($world);
         }
 
-        NGThreadPool::getInstance()->submitTask(new FileDeleteAsyncTask(Path::join($this->getServer()->getDataPath(), 'worlds', $worldName)));
+        Server::getInstance()->getAsyncPool()->submitTask(new FileDeleteAsyncTask(Path::join($this->getServer()->getDataPath(), 'worlds', $worldName)));
+    }
+
+    /**
+     * Creates a new private arena for the given creator and registers it into the engine.
+     *
+     * <p>Fires a cancellable {@see PlayerCreatePrivateGameEvent} first; when cancelled the arena is
+     * never generated (no world copy, no id increment), and <code>null</code> is returned.
+     *
+     * @param int $modeId
+     * @param \pocketmine\player\Player $creator
+     * @return Arena|null
+     */
+    final public function createPrivateArena(int $modeId, \pocketmine\player\Player $creator): ?Arena
+    {
+        $event = new PlayerCreatePrivateGameEvent($creator, $modeId);
+        $event->call();
+
+        if ($event->isCancelled()) {
+            return null;
+        }
+
+        $arena = $this->generateNewArena($modeId, true);
+        $arena->setPrivate(true, $creator);
+        $this->arenas[$arena->getId()] = $arena;
+
+        return $arena;
     }
 
     public function getArenaByWorld(World $world): ?Arena

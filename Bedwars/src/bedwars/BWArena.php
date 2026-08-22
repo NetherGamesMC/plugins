@@ -37,9 +37,11 @@ use libminigames\settings\GameSettings;
 use libminigames\Team;
 use libminigames\TeamArena;
 use libminigames\utils\BlockCollector;
+use libminigames\utils\RewardEntry;
 use libminigames\utils\TypeArena;
 use libminigames\utils\TypeArenaTrait;
 use NetherGames\NGEssentials\entity\custom\FloatingText;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use NetherGames\NGEssentials\utils\TextUtils;
@@ -190,7 +192,7 @@ final class BWArena extends TeamArena implements TypeArena
         $plugin = $this->getPlugin();
 
         if (
-            ($hit = $plugin->getEssentials()->getCombatLogger()->getLog($entity)->getLatestHit()) !== null &&
+            ($hit = NGEssentials::getInstance()->getCombatLogger()->getLog($entity)->getLatestHit()) !== null &&
             $hit->getTime() + 15 > time() &&
             ($damager = $plugin->getServer()->getPlayerExact($hit->getDamagerName())) !== null &&
             $this->isInArena($damager)
@@ -216,30 +218,28 @@ final class BWArena extends TeamArena implements TypeArena
             );
     }
 
-    public function addParticipation(Player $player, array $data = [], bool $guildXP = true): void
+    /**
+     * @param Player $player
+     * @return RewardEntry[]
+     */
+    public function getRewards(Player $player): array
     {
         $modeId = $this->getModeId();
         $statsData = $this->getStatsData();
         $gameSummary = [];
+        $rewards = [];
 
         if (($bedsBroken = $statsData->getValue($player, StatsData::BW_BEDS_BROKEN)) > 0) {
             $gameSummary[] = CustomIcon::BED_RED . $bedsBroken . ' Bed' . ($bedsBroken > 1 ? 's' : '') . ' Broken';
             $tempBedsBroken = $statsData->getValue($player, StatsData::BW_BEDS_BROKEN, true);
 
-            $data[self::DATA_XP][] = [
-                $bedsBroken . ' Bed' . ($bedsBroken > 1 ? 's' : '') . ' Broken',
-                $tempBedsBroken * 5
-            ];
-
-            $data[self::DATA_CREDITS][] = [
-                $bedsBroken . ' Bed' . ($bedsBroken > 1 ? 's' : '') . ' Broken',
-                $tempBedsBroken * (match ($modeId) {
-                    self::MODE_SOLO => 5,
-                    self::MODE_DOUBLES => 7,
-                    self::MODE_SQUADS => 9,
-                    default => 2
-                })
-            ];
+            $rewards[] = new RewardEntry('xp', $tempBedsBroken * 5, $bedsBroken . ' Bed' . ($bedsBroken > 1 ? 's' : '') . ' Broken');
+            $rewards[] = new RewardEntry('credits', $tempBedsBroken * (match ($modeId) {
+                self::MODE_SOLO => 5,
+                self::MODE_DOUBLES => 7,
+                self::MODE_SQUADS => 9,
+                default => 2
+            }), $bedsBroken . ' Bed' . ($bedsBroken > 1 ? 's' : '') . ' Broken');
         }
 
         if (($kills = $statsData->getValue($player, StatsData::BW_KILLS)) > 0) {
@@ -250,42 +250,29 @@ final class BWArena extends TeamArena implements TypeArena
             $gameSummary[] = CustomIcon::KILLS . $finalKills . ' Final Kill' . ($finalKills > 1 ? 's' : '');
             $tempFinalKills = $statsData->getValue($player, StatsData::BW_FINAL_KILLS, true);
 
-            $data[self::DATA_XP][] = [
-                $finalKills . ' Final Kill' . ($finalKills > 1 ? 's' : ''),
-                $tempFinalKills * 3
-            ];
-
-            $data[self::DATA_CREDITS][] = [
-                $finalKills . ' Final Kill' . ($finalKills > 1 ? 's' : ''),
-                $tempFinalKills * (match ($modeId) {
-                    self::MODE_SOLO => 2,
-                    self::MODE_DOUBLES, self::MODE_SQUADS => 3,
-                    default => 1
-                })
-            ];
+            $rewards[] = new RewardEntry('xp', $tempFinalKills * 3, $finalKills . ' Final Kill' . ($finalKills > 1 ? 's' : ''));
+            $rewards[] = new RewardEntry('credits', $tempFinalKills * (match ($modeId) {
+                self::MODE_SOLO => 2,
+                self::MODE_DOUBLES, self::MODE_SQUADS => 3,
+                default => 1
+            }), $finalKills . ' Final Kill' . ($finalKills > 1 ? 's' : ''));
         }
 
         if ($this->isWinner($player)) {
-            $data[self::DATA_CREDITS][] = [
-                'Win',
-                match ($this->getModeId()) {
-                    self::MODE_SOLO => 7,
-                    self::MODE_DOUBLES => 9,
-                    self::MODE_SQUADS => 11,
-                    default => 3
-                }
-            ];
+            $rewards[] = new RewardEntry('credits', match ($modeId) {
+                self::MODE_SOLO => 7,
+                self::MODE_DOUBLES => 9,
+                self::MODE_SQUADS => 11,
+                default => 3
+            }, 'Win');
 
             if ($this->hasPerfectGame($player)) {
-                $data[self::DATA_CREDITS][] = [
-                    'Perfect Win',
-                    match ($this->getModeId()) {
-                        self::MODE_SOLO => 3,
-                        self::MODE_DOUBLES => 5,
-                        self::MODE_SQUADS => 8,
-                        default => 0
-                    }
-                ];
+                $rewards[] = new RewardEntry('credits', match ($modeId) {
+                    self::MODE_SOLO => 3,
+                    self::MODE_DOUBLES => 5,
+                    self::MODE_SQUADS => 8,
+                    default => 0
+                }, 'Perfect Win');
             }
         }
 
@@ -297,7 +284,7 @@ final class BWArena extends TeamArena implements TypeArena
             }
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        return $rewards;
     }
 
     public function getTeamSize(): int
@@ -358,7 +345,7 @@ final class BWArena extends TeamArena implements TypeArena
 
         $this->playKillCosmetics($player);
 
-        $combatLog = $this->getPlugin()->getEssentials()->getCombatLogger()->getLog($victim);
+        $combatLog = NGEssentials::getInstance()->getCombatLogger()->getLog($victim);
         foreach ($combatLog->getAssists() as $assist) {
             if (($playerAssist = $this->getPlugin()->getServer()->getPlayerExact($assist)) === null || $playerAssist === $player) {
                 continue;
@@ -386,7 +373,7 @@ final class BWArena extends TeamArena implements TypeArena
 
         $world = $this->getWorld();
         $leaderboards = $plugin->getLeaderboards();
-        $entityManager = $plugin->getEssentials()->getEntityManager();
+        $entityManager = NGEssentials::getInstance()->getEntityManager();
 
         [$title, $text] = $leaderboards->get('bw_*mode*_wins', $this->getModeId());
         $entityManager->addEntity(new FloatingText(new Location(0, 65, -17, $world, 0.0, 0.0), $title, $text));
@@ -483,7 +470,6 @@ final class BWArena extends TeamArena implements TypeArena
 
     public function sendStats(): void
     {
-        $this->getStatsData()->sendLeaderboard($this, StatsData::BW_KILLS, '§l§aTOP KILLERS');
     }
 
     /**

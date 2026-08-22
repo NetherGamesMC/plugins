@@ -29,6 +29,7 @@ use murdermystery\utils\Items;
 use murdermystery\utils\MMKnife;
 use murdermystery\utils\StatsData;
 use murdermystery\utils\Utils;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\entity\object\ItemEntity;
 use pocketmine\entity\projectile\Arrow;
@@ -114,7 +115,7 @@ final class MMArenaListenerClassic extends MMArenaListener
                         } elseif ($damager !== $entity) {
                             $this->onPlayerDeath($entity);
                             if ($this->getArena()->isMurderer($entity)) {
-                                $this->getArena()->broadcastMessage(TextFormat::GRAY . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($damager) . TextFormat::YELLOW . ' has stopped the murderer, ' . TextFormat::GRAY . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($entity) . TextFormat::YELLOW . '!', true);
+                                $this->getArena()->broadcastMessage(TextFormat::GRAY . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($damager) . TextFormat::YELLOW . ' has stopped the murderer, ' . TextFormat::GRAY . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($entity) . TextFormat::YELLOW . '!', true);
                                 foreach ($this->getArena()->getPlayers() as $player) {
                                     if ($this->getArena()->isMurderer($player)) {
                                         $player->sendTitle('§cYOU LOSE!', '§6You got killed!', 0, 100, 20);

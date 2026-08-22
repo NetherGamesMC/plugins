@@ -23,14 +23,12 @@ declare(strict_types=1);
 
 namespace libminigames;
 
-use libminigames\events\MinigameQuitEvent;
-use libminigames\utils\Forms;
-use NetherGames\NGEssentials\NGEssentials;
-use NetherGames\NGEssentials\player\permissions\Permissions;
-use NetherGames\NGEssentials\ServerManager;
+use libminigames\events\player\PlayerQuitEvent;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
+use function array_shift;
+use function count;
 use function is_numeric;
 use function strtolower;
 
@@ -69,7 +67,7 @@ abstract class Command extends \pocketmine\command\Command
 
         parent::__construct(strtolower($plugin->getMinigameTag()));
 
-        $this->setPermission(Permissions::DEFAULT_COMMAND_PERMISSION);
+        $this->setPermission('minigame.command');
         $this->setAliases([strtolower($this->getPlugin()->getMinigameName())]);
         $this->setDescription($this->getPlugin()->getMinigameName() . ' Command');
     }
@@ -82,7 +80,7 @@ abstract class Command extends \pocketmine\command\Command
     public function execute(CommandSender $sender, string $commandLabel, array $args): bool
     {
         if (!$sender instanceof Player) {
-            $sender->sendMessage($this->getPlugin()->getEssentials()->getPrefix() . '§cThat command can only be run in-game.');
+            $sender->sendMessage('§cThat command can only be run in-game.');
 
             return false;
         }
@@ -92,35 +90,17 @@ abstract class Command extends \pocketmine\command\Command
                 if (($arena = $this->getPlugin()->getArena($sender)) === null) {
                     $sender->sendMessage(TextFormat::RED . "You're not in a " . $this->getPlugin()->getMinigameName() . ' game.');
                 } else {
-                    $arena->removePlayer($sender, MinigameQuitEvent::LEAVE);
+                    $arena->removePlayer($sender, PlayerQuitEvent::LEAVE);
                 }
-            } elseif (NGEssentials::isInDevelopmentMode()) {
-                switch ($args[0]) {
-                    case 'join':
-                        if (isset($args[1])) {
-                            $this->getPlugin()->joinArena($sender, is_numeric($args[1]) ? (int)$args[1] : -1);
-                        } else {
-                            $this->getPlugin()->joinArena($sender);
-                        }
-                        break;
-                    case 'start':
-                        if (($arena = $this->getPlugin()->getArena($sender)) !== null) {
-                            $arena->start();
-                        }
-                        break;
-                    default:
-                        if (array_shift($args) === 'edit' && count($args) > 0) {
-                            $this->runCommand($sender, array_shift($args), $args);
-                        } else {
-                            $sender->sendMessage($this->getUsage());
-                        }
-                        break;
-                }
-            } elseif ($args[0] === 'join' && (($serverManager = $this->getPlugin()->getEssentials()->getServerManager())->enableLobbyHandling() || $serverManager->getServerType() === ServerManager::SETUP)) {
-                if (count($this->getPlugin()->getModes()) > 1) {
-                    Forms::sendReplayMenu($this->getPlugin(), $sender, false);
+            } elseif ($args[0] === 'join') {
+                if (isset($args[1])) {
+                    $this->getPlugin()->joinArena($sender, is_numeric($args[1]) ? (int)$args[1] : -1);
                 } else {
                     $this->getPlugin()->joinArena($sender);
+                }
+            } elseif ($args[0] === 'start') {
+                if (($arena = $this->getPlugin()->getArena($sender)) !== null) {
+                    $arena->start();
                 }
             } else {
                 if (array_shift($args) === 'edit' && count($args) > 0) {

@@ -24,7 +24,6 @@ namespace soccer;
 use libminigames\Arena;
 use libminigames\ArenaListener;
 use libminigames\TeamArena;
-use NetherGames\NGEssentials\events\NGChatEvent;
 use pocketmine\entity\Location;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockBurnEvent;
@@ -32,6 +31,7 @@ use pocketmine\event\block\BlockGrowEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\block\BlockUpdateEvent;
 use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 use function preg_replace;
@@ -40,29 +40,24 @@ use function strpos;
 
 class SCArenaListener extends ArenaListener
 {
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
         $player = $event->getPlayer();
 
         if ($this->getArena()->isSpectator($player)) {
-            $event->setDisplayName(TextFormat::clean($player->getDisplayName()));
             $event->setRecipients($this->getArena()->getSpectators());
-            $event->setPrefix('§7Dead Chat > ');
-            $event->setStaffPrefix('§7Dead Chat Relay > ');
-            $event->setSplitter(': ');
-        } elseif ($this->getArena()->isSoloGame()) {
-            $event->setDisplayName($player->getDisplayName());
-        } else {
+            $event->setMessage('§7Dead Chat > ' . $event->getMessage());
+            $this->dispatchScopedChat($event);
+        } elseif (!$this->getArena()->isSoloGame()) {
             $team = $this->getArena()->getTeam($player);
-            $event->setDisplayName($team->getPlayerName($player));
 
             if ($this->getArena()->isRunning()) {
                 if (str_starts_with(TextFormat::clean($event->getMessage()), '!')) {
                     $event->setMessage(preg_replace('/!/', '', $event->getMessage(), 1));
                 } else {
                     $event->setRecipients($team->getAlivePlayers());
-                    $event->setPrefix($team->getColor() . 'Team > ');
-                    $event->setStaffPrefix('§fTeam Chat Relay > ');
+                    $event->setMessage($team->getColor() . 'Team > ' . $event->getMessage());
+                    $this->dispatchScopedChat($event);
                 }
             }
         }

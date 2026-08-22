@@ -30,8 +30,10 @@ use pocketmine\network\mcpe\protocol\types\BlockPosition;
 use pocketmine\network\mcpe\protocol\types\DimensionIds;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
+use function date;
 use function str_replace;
 use function strtolower;
+use function time;
 use const PHP_INT_MAX;
 
 class Utils
@@ -86,8 +88,12 @@ class Utils
     }
 
 
+    public static function isWeekend(?int $time = null): bool
+    {
+        return date('N', $time ?? time()) >= 6;
+    }
+
     /**
-     * @param Player $player
      * @param Player[] $players
      * @return Player|null
      */

@@ -28,7 +28,6 @@ use libminigames\ArenaListener;
 use murdermystery\gamemodes\classic\MMArenaListenerClassic;
 use murdermystery\utils\StatsData;
 use murdermystery\utils\Utils;
-use NetherGames\NGEssentials\events\NGChatEvent;
 use pocketmine\block\inventory\ChestInventory;
 use pocketmine\entity\projectile\Arrow;
 use pocketmine\event\block\BlockBurnEvent;
@@ -45,6 +44,7 @@ use pocketmine\event\inventory\CraftItemEvent;
 use pocketmine\event\inventory\InventoryOpenEvent;
 use pocketmine\event\inventory\InventoryTransactionEvent;
 use pocketmine\event\player\PlayerChangeSkinEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerDropItemEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemConsumeEvent;
@@ -131,18 +131,14 @@ abstract class MMArenaListener extends ArenaListener
         $this->getArena()->getMapFeatures()->onBlockPlace($event);
     }
 
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
         $player = $event->getPlayer();
 
         if ($this->getArena()->isSpectator($player)) {
-            $event->setDisplayName(TextFormat::clean($player->getDisplayName()));
+            $event->setMessage('§7Dead Chat > ' . $event->getMessage());
             $event->setRecipients($this->getArena()->getSpectators());
-            $event->setPrefix('§7Dead Chat > ');
-            $event->setStaffPrefix('§7Dead Chat Relay > ');
-            $event->setSplitter(': ');
-        } else {
-            $event->setDisplayName($player->getDisplayName());
+            $this->dispatchScopedChat($event);
         }
     }
 

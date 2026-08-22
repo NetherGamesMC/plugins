@@ -30,8 +30,10 @@ use libminigames\Minigame;
 use libminigames\Team;
 use libminigames\TeamArena;
 use libminigames\utils\BlockCollector;
+use libminigames\utils\RewardEntry;
 use libminigames\utils\TypeArena;
 use libminigames\utils\TypeArenaTrait;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use NetherGames\NGEssentials\utils\TextUtils;
@@ -125,20 +127,23 @@ class DuelsArena extends TeamArena implements TypeArena
         ];
     }
 
-    public function addParticipation(Player $player, array $data, bool $guildXP = true): void
+    /**
+     * @param Player $player
+     * @return RewardEntry[]
+     */
+    public function getRewards(Player $player): array
     {
+        $rewards = [];
+
         if ($this->isWinner($player)) {
-            $data[self::DATA_CREDITS][] = [
-                'Win',
-                (match($this->getModeId()) {
-                    self::MODE_SOLO => 4,
-                    self::MODE_DOUBLES => 6,
-                    default => 4
-                })
-            ];
+            $rewards[] = new RewardEntry('credits', match($this->getModeId()) {
+                self::MODE_SOLO => 4,
+                self::MODE_DOUBLES => 6,
+                default => 4
+            }, 'Win');
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        return $rewards;
     }
 
     public function resetPlayer(Player $player): void
@@ -178,7 +183,7 @@ class DuelsArena extends TeamArena implements TypeArena
             Kits::giveKit($player, $this->getType());
         }
 
-        $playerName = $this->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($player);
+        $playerName = NGEssentials::getInstance()->getPlayerManager()->getPlayerName($player);
         $kills = $this->kills[$playerName] ?? 0;
         $this->kills[$playerName] = ++$kills;
 
@@ -188,7 +193,7 @@ class DuelsArena extends TeamArena implements TypeArena
 
         $this->playKillCosmetics($player);
 
-        $combatLog = $this->getPlugin()->getEssentials()->getCombatLogger()->getLog($victim);
+        $combatLog = NGEssentials::getInstance()->getCombatLogger()->getLog($victim);
         foreach ($combatLog->getAssists() as $assist) {
             if (($playerAssist = $this->getPlugin()->getServer()->getPlayerExact($assist)) === null || $playerAssist === $player) {
                 continue;
@@ -297,7 +302,7 @@ class DuelsArena extends TeamArena implements TypeArena
                         if (!in_array($player, $team->getAlivePlayers(), true)) {
                             $health = 0;
                         }
-                        $opponent = [$this->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($player), $health];
+                        $opponent = [NGEssentials::getInstance()->getPlayerManager()->getPlayerName($player), $health];
                     }
                     break;
                 }
@@ -330,7 +335,7 @@ class DuelsArena extends TeamArena implements TypeArena
                         if (!in_array($player, $team->getAlivePlayers(), true)) {
                             $health = 0;
                         }
-                        $opponent[$key++] = [$this->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($player), $health];
+                        $opponent[$key++] = [NGEssentials::getInstance()->getPlayerManager()->getPlayerName($player), $health];
                     }
                     break;
                 }

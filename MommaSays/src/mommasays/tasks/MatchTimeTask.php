@@ -24,12 +24,12 @@ declare(strict_types=1);
 namespace mommasays\tasks;
 
 use libminigames\Arena;
+use libminigames\session\GameSession;
 use mommasays\games\Game;
 use mommasays\games\GameKeepMove;
 use mommasays\games\GameNoMove;
 use mommasays\MSArena;
 use mommasays\utils\StatsData;
-use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
@@ -70,9 +70,9 @@ class MatchTimeTask extends \libminigames\tasks\MatchTimeTask
 
                 if ($this->timer > 0) {
                     if ($currentGame instanceof GameNoMove) {
-                        /** @var NGPlayer $player */
+                        /** @var Player $player */
                         foreach ($arena->getPlayers() as $player) {
-                            $lastMoveTime = $player->getLastMoveTime();
+                            $lastMoveTime = GameSession::getSession($player)->getLastMoveTime();
                             if (round($lastMoveTime, 10) - round(microtime(true), 10) <= (1 / 20)) {
                                 $currentGame->onPlayerMove($player);
                             }

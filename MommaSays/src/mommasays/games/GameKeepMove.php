@@ -23,7 +23,8 @@ declare(strict_types=1);
 
 namespace mommasays\games;
 
-use NetherGames\NGEssentials\player\NGPlayer;
+use libminigames\session\GameSession;
+use pocketmine\player\Player;
 
 class GameKeepMove extends Game
 {
@@ -38,9 +39,9 @@ class GameKeepMove extends Game
 
     public function tickMovementCheck(): void
     {
-        /** @var NGPlayer $player */
+        /** @var Player $player */
         foreach ($this->getArena()->getAlivePlayers() as $player) {
-            if (!$this->isLoser($player->getName()) && ($this->tickTime - $player->getLastMoveTime()) > self::MOVE_TRESHOLD) {
+            if (!$this->isLoser($player->getName()) && ($this->tickTime - GameSession::getSession($player)->getLastMoveTime()) > self::MOVE_TRESHOLD) {
                 $this->addLoser($player);
             }
         }

@@ -293,6 +293,8 @@ class NGEssentials extends PluginBase
 
         $this->getEntityManager()->onEnable();
 
+        $this->registerMinigamesModule();
+
         /** @phpstan-ignore-next-line */
         $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(fn() => Call::drainCompletionQueue(PHP_INT_MIN)), 1);
 
@@ -306,6 +308,16 @@ class NGEssentials extends PluginBase
     public function getEntityManager(): EntityManager
     {
         return $this->entityManager;
+    }
+
+    /**
+     * Registers the NetherGames-to-libminigames integration module. This wires NG-specific
+     * behavior (matchmaking, parties, rewards, persistence, cosmetics) to the generic engine's
+     * event surface. The method is idempotent and safe to call multiple times.
+     */
+    public function registerMinigamesModule(): void
+    {
+        \NetherGames\NGEssentials\minigames\MinigamesModule::register($this);
     }
 
     public static function isProxyEnabled(): bool

@@ -2,8 +2,8 @@
 
 namespace meltdown\arena\handler;
 
+use libminigames\utils\scoreboard\Scoreboard;
 use NetherGames\NGEssentials\utils\CustomIcon;
-use NetherGames\NGEssentials\utils\scoreboard\Scoreboard;
 use pocketmine\utils\TextFormat;
 use meltdown\arena\MDArena;
 use meltdown\Meltdown;

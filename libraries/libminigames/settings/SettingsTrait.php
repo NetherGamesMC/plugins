@@ -34,9 +34,7 @@ use libforms\elements\Toggle;
 use libminigames\Arena;
 use libminigames\settings\components\Component;
 use libminigames\TeamArena;
-use NetherGames\NGEssentials\NGEssentials;
-use NetherGames\NGEssentials\player\PlayerData;
-use NetherGames\NGEssentials\player\Translator;
+use libminigames\utils\Messages;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 use ReflectionAttribute;
@@ -166,7 +164,7 @@ trait SettingsTrait
 
         $form->setSubmitClosure(function (Player $player): void {
             if ($player->isConnected()) {
-                Translator::sendMessage($player, "game.settings.updated", Translator::TYPE_INFO);
+                Messages::send($player, 'minigame.settings.updated', [], 'chat', 'info', TextFormat::GREEN . 'Game settings updated.');
             }
         });
         $form->setTitle($title);
@@ -229,29 +227,7 @@ trait SettingsTrait
     }
 
     /**
-     * This method fetches the game configuration from the player's settings
-     * and returns
-     *
-     * @param Player $player
-     * @param string $serverType
-     * @param string $gameType
-     * @return static|null
-     * @throws ReflectionException
-     */
-    public function fetchFromPlayer(Player $player, string $serverType, string $gameType): ?static
-    {
-        /*$data = NGEssentials::getInstance()->getPlayerData()->getArray(
-            player: $player,
-            id: PlayerData::GAME_CONFIGURATIONS
-        )[self::createKeyFromTypes($serverType, $gameType)] ?? [];
-        // If there is data that exists, parse it from the JSON, otherwise, return a new instance
-        return count($data) > 0 ? self::fromArray($data) : null;*/
-        return null;
-    }
-
-    /**
      * This method will create a key from the server type and game type.
-     * This is used as a way to save and retrieve specific configurations from the player's data.
      *
      * @param string $serverType
      * @param string $gameType
@@ -286,33 +262,9 @@ trait SettingsTrait
     }
 
     /**
-     * This method will update the player's game configuration to match that of the current state.
-     *
-     * @param Player $player
-     * @param string $serverType
-     * @param string $gameType
-     * @return void
-     */
-    public function saveToPlayer(Player $player, string $serverType, string $gameType): void
-    {
-        $playerData = NGEssentials::getInstance()->getPlayerData();
-        // Fetches all game configurations for the player
-        $data = $playerData->getArray(player: $player, id: PlayerData::GAME_CONFIGURATIONS);
-        // Updates the current game configuration
-        $data[self::createKeyFromTypes($serverType, $gameType)] = $this->asArray();
-        // Saves the game configurations back to the player's data
-        $playerData->setValue(
-            player: $player,
-            id: PlayerData::GAME_CONFIGURATIONS,
-            value: $data
-        );
-    }
-
-    /**
-     * This method will send an announcement to all players in the arena
+     * This method will send an announcement to all players in the arena.
      *
      * @param Arena $arena
-     * @return void
      */
     public function sendSettingsAnnouncement(Arena $arena): void
     {

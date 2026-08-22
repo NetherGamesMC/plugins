@@ -1,4 +1,8 @@
 ---
+tag: mm
+name: 'Murder Mystery'
+standalone: true
+
 sign-settings:
   format:
     line1: "§f-* §d§lMM§r§f *-"

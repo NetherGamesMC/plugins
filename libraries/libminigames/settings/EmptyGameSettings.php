@@ -23,8 +23,6 @@ declare(strict_types=1);
 
 namespace libminigames\settings;
 
-use pocketmine\player\Player;
-
 /**
  * `EmptyGameSettings` is a class that is created when no game settings is passed to the `Arena` constructor.
  *
@@ -32,16 +30,4 @@ use pocketmine\player\Player;
  */
 final class EmptyGameSettings extends GameSettings
 {
-    /**
-     * EmptyGameSettings is only used when no settings are passed to the constructor.
-     * This means that the game should not save the settings to the player's data
-     *
-     * @param Player $player
-     * @param string $serverType
-     * @param string $gameType
-     * @return void
-     */
-    public function saveToPlayer(Player $player, string $serverType, string $gameType): void
-    {
-    }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace skywars\utils;
 
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\utils\SkinUtils;
 use pocketmine\entity\Location;
 use pocketmine\entity\Skin;
@@ -55,7 +56,7 @@ class LuckyBlockManager
     public function createLuckyBlock(Location $location): LuckyBlock
     {
         $texture = SkinUtils::getTextureFromResources(Path::join('skins', 'objects', 'luckyblock', 'luckyblock.png'));
-        $resource = $this->arena->getPlugin()->getEssentials()->getResource(Path::join('skins', 'objects', 'luckyblock', 'luckyblock.json'));
+        $resource = NGEssentials::getInstance()->getResource(Path::join('skins', 'objects', 'luckyblock', 'luckyblock.json'));
 
         $geometry = stream_get_contents($resource);
         fclose($resource);

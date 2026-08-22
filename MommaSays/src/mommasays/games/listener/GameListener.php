@@ -22,7 +22,6 @@
 
 namespace mommasays\games\listener;
 
-use NetherGames\NGEssentials\events\NGChatEvent;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockBurnEvent;
 use pocketmine\event\block\BlockPlaceEvent;
@@ -35,6 +34,7 @@ use pocketmine\event\inventory\InventoryCloseEvent;
 use pocketmine\event\inventory\InventoryOpenEvent;
 use pocketmine\event\inventory\InventoryTransactionEvent;
 use pocketmine\event\player\PlayerChangeSkinEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerDropItemEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemConsumeEvent;
@@ -81,7 +81,7 @@ class GameListener
 
     }
 
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
 
     }

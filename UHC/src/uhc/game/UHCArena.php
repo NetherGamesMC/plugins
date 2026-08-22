@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace uhc\game;
 
 use libminigames\TeamArena;
+use libminigames\utils\RewardEntry;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\entity\Entity;
@@ -369,32 +370,30 @@ class UHCArena extends TeamArena
         return $this->getModeId() === TeamArena::MODE_TRIOS ? 6 : ($this->getModeId() === TeamArena::MODE_SQUADS ? 8 : 4);
     }
 
-    public function addParticipation(Player $player, array $data, bool $guildXP = false): void
+    /**
+     * @param Player $player
+     * @return RewardEntry[]
+     */
+    public function getRewards(Player $player): array
     {
-        $guildXP = true;
+        $rewards = [];
         $modeId = $this->getModeId();
 
         if (($kills = $this->getStatsData()->getValue($player, StatsData::UHC_KILLS)) > 0) {
             $player->sendMessage(TextFormat::RED . TextFormat::BOLD . 'GAME SUMMARY:');
             $player->sendMessage(CustomIcon::SWORD . $kills . ' Kill' . ($kills > 1 ? 's' : ''));
 
-            $data[self::DATA_CREDITS][] = [
-                $kills . ' Kill' . ($kills > 1 ? 's' : ''),
-                $kills * (match ($modeId) {
-                    TeamArena::MODE_SOLO => 8,
-                    TeamArena::MODE_DOUBLES => 10,
-                    default => 8
-                })
-            ];
+            $rewards[] = new RewardEntry('credits', $kills * (match ($modeId) {
+                TeamArena::MODE_SOLO => 8,
+                TeamArena::MODE_DOUBLES => 10,
+                default => 8
+            }), $kills . ' Kill' . ($kills > 1 ? 's' : ''));
         }
 
         if ($this->isWinner($player)) {
-            $data[self::DATA_CREDITS][] = [
-                "Win",
-                12
-            ];
+            $rewards[] = new RewardEntry('credits', 12, 'Win');
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        return $rewards;
     }
 }

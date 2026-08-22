@@ -32,6 +32,7 @@ use murdermystery\MMSettings;
 use murdermystery\MurderMystery;
 use murdermystery\tasks\CountDownTask;
 use murdermystery\utils\StatsData;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\NGPlayer;
 use pocketmine\player\GameMode;
 use pocketmine\player\Player;
@@ -96,7 +97,7 @@ abstract class MMArena extends Arena
             }
 
             if ($this->getGameSettings()->hasRevealIdentities()) {
-                $p->setNameTag($this->getPlugin()->getEssentials()->getPlayerManager()->getNameTag($p, TextFormat::GREEN, true, true));
+                $p->setNameTag(NGEssentials::getInstance()->getPlayerManager()->getNameTag($p, TextFormat::GREEN, true, true));
             }
         }
     }

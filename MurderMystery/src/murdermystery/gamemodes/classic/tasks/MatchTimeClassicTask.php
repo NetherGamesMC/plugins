@@ -29,6 +29,7 @@ use murdermystery\gamemodes\classic\MMArenaClassic;
 use murdermystery\utils\GuardianCurseSound;
 use murdermystery\utils\Items;
 use murdermystery\utils\Utils;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\item\Bow;
 use pocketmine\item\Sword;
@@ -57,7 +58,7 @@ class MatchTimeClassicTask extends MatchTimeTask
             if ($murderer === null || !$murderer->isConnected()) {
                 $this->getArena()->finish();
             } else {
-                $this->getArena()->broadcastMessage(TextFormat::YELLOW . 'The murderer, ' . TextFormat::GRAY . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($murderer) . TextFormat::YELLOW . ', has killed everyone!', true);
+                $this->getArena()->broadcastMessage(TextFormat::YELLOW . 'The murderer, ' . TextFormat::GRAY . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($murderer) . TextFormat::YELLOW . ', has killed everyone!', true);
 
                 foreach ($this->getArena()->getPlayers() as $p) {
                     if ($this->getArena()->isMurderer($p)) {

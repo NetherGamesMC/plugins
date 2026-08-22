@@ -28,9 +28,8 @@ use libminigames\Arena;
 use libminigames\Minigame;
 use libminigames\TeamArena;
 use libminigames\utils\Autoloader;
-use libminigames\utils\LeaderboardData;
 use muqsit\invmenu\InvMenuHandler;
-use NetherGames\NGEssentials\ServerManager;
+use NetherGames\NGEssentials\minigames\LeaderboardData;
 use pocketmine\utils\Config;
 use function dirname;
 
@@ -53,16 +52,16 @@ class TheBridge extends Minigame
         $arenaConfig->save();
         $this->arenaConfig = new BridgeArenaConfig($arenaConfig);
 
-        $this->getServer()->getCommandMap()->register(BridgeCommand::class, new BridgeCommand($this));
-
-        $this->getServer()->getPluginManager()->registerEvents(new BridgeListener($this), $this);
-
         $this->leaderboards = new LeaderboardData($this->getModes());
         foreach ($this->getModes() as $i => $mode) {
             $this->getLeaderboards()->load('tb_*mode*_wins', $i, -1, '§l§a*MODE* WINS LEADERBOARD', '§7Most The Bridge *mode* wins');
             $this->getLeaderboards()->load('tb_*mode*_kills', $i, -1, '§l§a*MODE* KILLS LEADERBOARD', '§7Most The Bridge *mode* kills');
             $this->getLeaderboards()->load('tb_*mode*_goals', $i, -1, '§l§a*MODE* GOALS LEADERBOARD', '§7Most The Bridge *mode* goals');
         }
+
+        $this->getServer()->getCommandMap()->register(BridgeCommand::class, new BridgeCommand($this));
+
+        $this->getServer()->getPluginManager()->registerEvents(new BridgeListener($this), $this);
     }
 
     public function getLeaderboards(): LeaderboardData
@@ -88,11 +87,6 @@ class TheBridge extends Minigame
                     subject: $mapName
                 ) && is_dir("{$this->getDataFolder()}/arenas/$mapName"),
         );
-    }
-
-    public function getMinigameTag(): string
-    {
-        return ServerManager::TB;
     }
 
     public function getArenaConfig(): BridgeArenaConfig

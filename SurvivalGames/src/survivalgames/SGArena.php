@@ -6,6 +6,7 @@ namespace survivalgames;
 
 use libminigames\tasks\CountDownTask;
 use libminigames\utils\BlockCollector;
+use libminigames\utils\RewardEntry;
 use NetherGames\NGEssentials\player\cosmetics\CosmeticHandler;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
@@ -112,40 +113,34 @@ class SGArena extends SGTypeArena
 
     public function sendStats(): void
     {
-        $this->getStatsData()->sendLeaderboard($this, StatsData::SG_KILLS, '§l§aTOP KILLERS');
     }
 
-    public function addParticipation(Player $player, array $data, bool $guildXP = false): void
+    public function getRewards(Player $player): array
     {
-        if (!$this->isPrivateGame()) {
-            $guildXP = true;
-
-            $type = $this->getType();
-
-            if ($this->isWinner($player)) {
-                $data[self::DATA_CREDITS][] = [
-                    'Win',
-                    (match ($type) {
-                        SGTypeArena::TYPE_NORMAL => 12,
-                        SGTypeArena::TYPE_HARDCORE => 16,
-                        default => 12
-                    })
-                ];
-            }
-
-            if (($kills = $this->getStatsData()->getValue($player, StatsData::SG_KILLS)) > 0) {
-                $data[self::DATA_CREDITS][] = [
-                    $kills . ' Kill' . ($kills > 1 ? 's' : ''),
-                    $kills * (match ($type) {
-                        SGTypeArena::TYPE_NORMAL => 3,
-                        SGTypeArena::TYPE_HARDCORE => 4,
-                        default => 3
-                    })
-                ];
-            }
+        if ($this->isPrivateGame()) {
+            return [];
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        $rewards = [];
+        $type = $this->getType();
+
+        if ($this->isWinner($player)) {
+            $rewards[] = new RewardEntry('credits', match ($type) {
+                SGTypeArena::TYPE_NORMAL => 12,
+                SGTypeArena::TYPE_HARDCORE => 16,
+                default => 12
+            }, 'Win');
+        }
+
+        if (($kills = $this->getStatsData()->getValue($player, StatsData::SG_KILLS)) > 0) {
+            $rewards[] = new RewardEntry('credits', $kills * (match ($type) {
+                SGTypeArena::TYPE_NORMAL => 3,
+                SGTypeArena::TYPE_HARDCORE => 4,
+                default => 3
+            }), $kills . ' Kill' . ($kills > 1 ? 's' : ''));
+        }
+
+        return $rewards;
     }
 
     public function getBorderManager(): CircleManager

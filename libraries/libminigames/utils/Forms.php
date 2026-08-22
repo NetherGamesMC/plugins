@@ -29,21 +29,20 @@ use libforms\elements\ImageButton;
 use libforms\FormManager;
 use libforms\SimpleForm;
 use libminigames\Arena;
-use libminigames\events\MinigameQuitEvent;
+use libminigames\events\player\PlayerQuitEvent;
 use libminigames\Minigame;
 use libminigames\Team;
 use libminigames\TeamArena;
-use NetherGames\NGEssentials\player\NGPlayer;
-use NetherGames\NGEssentials\player\permissions\Permissions;
-use NetherGames\NGEssentials\ServerManager;
-use NetherGames\NGEssentials\utils\TextUtils;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 use function array_filter;
 use function array_key_first;
 use function array_keys;
 use function array_search;
+use function array_reduce;
 use function count;
+use function strcmp;
+use function usort;
 
 abstract class Forms
 {
@@ -52,78 +51,16 @@ abstract class Forms
         $form = FormManager::createSimpleForm($player);
 
         if ($form !== null) {
-            $ess = $plugin->getEssentials();
-            $playerManager = $ess->getPlayerManager();
-            $partyManager = $playerManager->getSocialManager()->getPartyManager();
-
             $callable = static function (Player $player, string $mode) use ($plugin) {
-                /** @var NGPlayer $player */
-                $serverManager = $plugin->getEssentials()->getServerManager();
-
                 if (($arena = $plugin->getArena($player)) !== null) {
-                    $arena->removePlayer($player, MinigameQuitEvent::END, true, false);
+                    $arena->removePlayer($player, PlayerQuitEvent::END, true, false);
                 }
 
-                if ($plugin->isStandAloneGame()) {
-                    $playerManager = $plugin->getEssentials()->getPlayerManager();
-
-                    if (($gameType = $serverManager->getGameType()) === '' || $gameType === $mode) {
-                        $onMatchmakingFailure = static function () use ($plugin, $player): void {
-                            if ($player->isConnected()) {
-                                $plugin->joinArena($player);
-                            }
-                        };
-
-                        if ($plugin->canJoinArena($player, $plugin->getModeId($mode)) || !$playerManager->transferPlayer($player, $serverManager->getServerType(), $serverManager->getGameType(), true, $onMatchmakingFailure)) {
-                            $onMatchmakingFailure();
-                        }
-                    } else {
-                        $onMatchmakingFailure = static function () use ($playerManager, $player): void {
-                            if ($player->isConnected()) {
-                                $playerManager->transferPlayer($player);
-                            }
-                        };
-
-                        if (!$playerManager->transferPlayer($player, $serverManager->getServerType(), $mode, true, $onMatchmakingFailure)) {
-                            $onMatchmakingFailure();
-                        }
-                    }
-                } else {
-                    $plugin->joinArena($player, $plugin->getModeId($mode));
-                }
+                $plugin->joinArena($player, $plugin->getModeId($mode));
             };
 
-            $modeSelector = static function (Player $player, string $mode) use ($plugin, $playerManager, $partyManager, $callable) {
-                if (($party = $partyManager->getParty($player)) === null) {
-                    $callable($player, $mode);
-                } elseif (($arena = $plugin->getArena($player)) === null) {
-                    $callable($player, $mode);
-                } else {
-                    $ingamePlayers = $arena->isRunning() ? array_filter($partyManager->getPlayers($party), fn(Player $member) => !$arena->isSpectator($member) && $member !== $player) : [];
-
-                    if (count($ingamePlayers) === 0) {
-                        $callable($player, $mode);
-                    } else {
-                        $form = FormManager::createModalForm($player);
-
-                        if ($form !== null) {
-                            $form->setTitle('Quit the match');
-
-                            if (count($ingamePlayers) === 1) {
-                                $form->setContent($playerManager->getPlayerName($ingamePlayers[array_key_first($ingamePlayers)]) . ' is still in the game. Are you sure you wish to take them to the lobby?');
-                            } else {
-                                $form->setContent(Utils::getPrettyList($playerManager->getPlayerNames($ingamePlayers)) . ' are still in the game. Are you sure you wish to take them to the lobby?');
-                            }
-
-                            $form->setButton1(new Button(TextFormat::BOLD . TextFormat::GREEN . 'Yes', static function (Player $player) use ($callable, $mode) {
-                                $callable($player, $mode);
-                            }));
-                            $form->setButton2(new Button(TextFormat::BOLD . TextFormat::RED . 'No'));
-
-                            $form->sendForm();
-                        }
-                    }
-                }
+            $modeSelector = static function (Player $player, string $mode) use ($callable) {
+                $callable($player, $mode);
             };
 
             $modes = $plugin->getModes();
@@ -143,16 +80,12 @@ abstract class Forms
                 return;
             }
 
-            $serverType = $plugin->getEssentials()->getServerManager()->getServerType();
-            $icon = ServerManager::getIcon($serverType);
             if (($gameTypesCount = count($modes)) < 5) {
                 $form->setType(SimpleForm::getDynamicType($gameTypesCount));
             }
 
             foreach ($modes as $gameType) {
-                $cluster = $ess->getServerManager()->getCluster($serverType, $gameType);
-
-                $form->addButton(new ImageButton(TextFormat::GOLD . $gameType . TextFormat::EOL . $cluster->getStringStatus($player), ImageButton::IMAGE_TYPE_PATH, $icon, static function (Player $player) use ($modeSelector, $gameType) {
+                $form->addButton(new ImageButton(TextFormat::GOLD . $gameType, ImageButton::IMAGE_TYPE_PATH, 'textures/ui/icon_set_Octagon', static function (Player $player) use ($modeSelector, $gameType) {
                     $modeSelector($player, $gameType);
                 }));
             }
@@ -163,12 +96,9 @@ abstract class Forms
 
     public static function sendTeleporter(Player $player, Arena $arena): void
     {
-        /** @var \NetherGames\NGEssentials\player\NGPlayer $player */
-
         $form = FormManager::createSimpleForm($player);
 
         if ($form !== null) {
-            $playerManager = $arena->getPlugin()->getEssentials()->getPlayerManager();
             $playerNames = [];
 
             if ($arena instanceof TeamArena) {
@@ -178,11 +108,13 @@ abstract class Forms
                     }
                 }
             } else {
-                $playerNames = $playerManager->getPlayerNames($arena->getAlivePlayers());
+                foreach ($arena->getAlivePlayers() as $alivePlayer) {
+                    $playerNames[] = $alivePlayer->getDisplayName();
+                }
             }
 
             if (empty($playerNames)) {
-                $player->sendConditionalMessage(TextFormat::RED . "No available players to teleport to!");
+                $player->sendActionBarMessage(TextFormat::RED . "No available players to teleport to!");
                 return;
             }
 
@@ -191,14 +123,17 @@ abstract class Forms
 
             foreach ($playerNames as $playerName) {
                 $clearPlayerName = TextFormat::clean($playerName);
-                $form->addButton(new ImageButton('Teleport to ' . $playerName, ImageButton::IMAGE_TYPE_FACE, $clearPlayerName, static function (Player $player) use ($playerManager, $arena, $clearPlayerName) {
+                $form->addButton(new ImageButton('Teleport to ' . $playerName, ImageButton::IMAGE_TYPE_FACE, $clearPlayerName, static function (Player $player) use ($arena, $clearPlayerName) {
                     if ($arena->isInArena($player)) {
                         if ($arena->isRunning()) {
-                            if (($ingamePlayer = $playerManager->getBestMatchingPlayer($clearPlayerName)) instanceof Player && $arena->isInArena($ingamePlayer) && !$arena->isSpectator($ingamePlayer)) {
-                                $player->teleport($ingamePlayer->getLocation());
-                            } else {
-                                $player->sendMessage(TextFormat::RED . 'That player is not in this game anymore.');
+                            foreach ($arena->getAlivePlayers() as $alivePlayer) {
+                                if (TextFormat::clean($alivePlayer->getDisplayName()) === $clearPlayerName && !$arena->isSpectator($alivePlayer)) {
+                                    $player->teleport($alivePlayer->getLocation());
+                                    return;
+                                }
                             }
+
+                            $player->sendMessage(TextFormat::RED . 'That player is not in this game anymore.');
                         } else {
                             $player->sendMessage(TextFormat::RED . 'That game is not running.');
                         }
@@ -221,25 +156,13 @@ abstract class Forms
             return;
         }
 
-        if (!($isPrivate = $arena->isPrivateGame()) && !$player->hasPermission(Permissions::RANK_EMERALD)) {
-            $player->sendMessage(TextFormat::RED . "You don't have permission to choose a team. Buy the §l§aEMERALD §r§cor §l§bLEGEND §r§crank at §bngmc.co/store §cto choose one!");
-            return;
-        }
-
-        if ($isPrivate) {
+        if ($arena->isPrivateGame()) {
             if (!$arena->getGameSettings()->isTeamChangingAllowed()) {
-                $player->sendMessage(TextFormat::YELLOW . "Party host has disabled team changing.");
+                Messages::send($player, 'minigame.team.disabled', [], 'actionbar', 'warning', TextFormat::YELLOW . "Party host has disabled team changing.");
                 return;
             }
         } else if ($arena->isSoloGame()) {
             $player->sendMessage(TextFormat::YELLOW . "You are in " . $arena->getTeam($player)->getDisplayName() . TextFormat::YELLOW . " team!");
-            return;
-        } else if (
-            !$arena->isPartyGame() &&
-            ($party = $arena->getPlugin()->getEssentials()->getPlayerManager()->getSocialManager()->getPartyManager()->getParty($player)) !== null &&
-            $party->getLeader() !== $player
-        ) {
-            $player->sendMessage(TextFormat::RED . "Only the party leader can change teams.");
             return;
         }
 
@@ -256,25 +179,8 @@ abstract class Forms
                     static function (Player $player) use ($arena, $selectedTeam): void {
                         if ($arena->isInArena($player)) {
                             if ($arena->isWaiting()) {
-                                $partyManager = $arena->getPlugin()->getEssentials()->getPlayerManager()->getSocialManager()->getPartyManager();
-                                $party = $partyManager->getParty($player);
-                                $shouldMoveParty = $party !== null && !$arena->isPartyGame();
-
-                                if (($error = $selectedTeam->canJoinTeam($player, $shouldMoveParty ? $party->getTotalMembers() : 1)) !== null) {
+                                if (($error = $selectedTeam->selectTeam($player, 1)) !== null) {
                                     $player->sendMessage(TextFormat::RED . $error);
-                                } else if ($shouldMoveParty) {
-                                    /** @var Party $party */
-                                    /** @phpstan-ignore-next-line */
-                                    foreach ($partyManager->getPlayers($party) as $member) {
-                                        if (!$arena->isInArena($member)) {
-                                            $player->sendMessage("§c" . $member->getDisplayName() . " §cis not in the arena anymore, skipping them.");
-                                            continue;
-                                        }
-                                        $arena->getTeamNull($member)?->removePlayer($member, true);
-                                        $selectedTeam->addPlayer($member, true);
-                                        $selectedTeam->queuePlayer($member);
-                                        $member->sendMessage('§eYour party joined the ' . $selectedTeam->getDisplayName() . ' §eteam');
-                                    }
                                 } else {
                                     $arena->getTeamNull($player)?->removePlayer($player, true);
                                     $selectedTeam->addPlayer($player, true);
@@ -317,7 +223,6 @@ abstract class Forms
             $teamOptions = array_reduce($arena->getTeams(), fn(array $carry, Team $team): array => $carry + [
                     $team->getDisplayName() => $team
                 ], []);
-
 
             $players = $arena->getAlivePlayers();
             usort($players, fn(Player $a, Player $b) => strcmp(TextFormat::clean($a->getDisplayName()), TextFormat::clean($b->getDisplayName())));
@@ -375,12 +280,11 @@ abstract class Forms
                 $mapDisplayName = $plugin->getMapDisplayName($map, true);
 
                 $form->addButton(new ImageButton($mapDisplayName, ImageButton::IMAGE_TYPE_MAP, $map, static function (Player $player) use ($arena, $plugin, $button, $map) {
-                    /** @var NGPlayer $player */
                     if ($arena->isWaiting()) {
                         $arena->addMapVote($player, $button);
-                        $player->sendConditionalMessage(TextFormat::GREEN . 'You voted for ' . TextFormat::GOLD . $plugin->getMapDisplayName($map));
+                        Messages::send($player, 'minigame.map.voted', ['map' => $plugin->getMapDisplayName($map)], 'actionbar', 'success', TextFormat::GREEN . 'You voted for ' . TextFormat::GOLD . $plugin->getMapDisplayName($map));
                     } else {
-                        $player->sendConditionalMessage(TextFormat::RED . 'You cannot vote for a map now - the game is starting!');
+                        Messages::send($player, 'minigame.map.vote_closed', [], 'actionbar', 'error', TextFormat::RED . 'You cannot vote for a map now - the game is starting!');
                     }
                 }));
             }

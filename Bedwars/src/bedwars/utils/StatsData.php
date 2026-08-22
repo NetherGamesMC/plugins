@@ -5,11 +5,6 @@ declare(strict_types=1);
 
 namespace bedwars\utils;
 
-
-use libminigames\Arena;
-use function date;
-use function time;
-
 class StatsData extends \libminigames\utils\StatsData
 {
     public const BW_KILLS = 10;
@@ -55,14 +50,5 @@ class StatsData extends \libminigames\utils\StatsData
 
         $this->registerStat(self::BW_KILL_ASSISTS, 'bw_kill_assists');
         $this->registerStat(self::BW_MODE_KILL_ASSISTS, 'bw_*mode*_kill_assists');
-    }
-
-    public function save(Arena $arena): void
-    {
-        if (date('m-d', time()) === '04-01') {
-            return;
-        }
-
-        parent::save($arena);
     }
 }

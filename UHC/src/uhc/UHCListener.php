@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace uhc;
 
-use libminigames\events\MinigameQuitEvent;
+use libminigames\events\player\PlayerLoginEvent;
+use libminigames\events\player\PlayerQuitEvent;
 use libminigames\MinigameListener;
 use NetherGames\NGEssentials\events\NGJoinEvent;
-use NetherGames\NGEssentials\events\NGLoginEvent;
 use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\player\PlayerData;
@@ -26,7 +26,7 @@ class UHCListener extends MinigameListener
             $plugin = $this->getPlugin();
             /** @var NGPlayer $player */
             $player = $event->getPlayer();
-            $ess = $plugin->getEssentials();
+            $ess = NGEssentials::getInstance();
 
             if ($ess->getPlayerData()->getBool($player, PlayerData::RECONNECT)) {
                 $ess->getPlayerData()->setValue($player, PlayerData::RECONNECT, false);
@@ -46,23 +46,23 @@ class UHCListener extends MinigameListener
     }
 
     /**
-     * @param NGLoginEvent $event
+     * @param PlayerLoginEvent $event
      *
      * @priority NORMAL
      */
-    public function onNGLogin(NGLoginEvent $event): void
+    public function onPlayerLogin(PlayerLoginEvent $event): void
     {
         if (!NGEssentials::isInDevelopmentMode()) {
             $player = $event->getPlayer();
-            $ess = $this->getPlugin()->getEssentials();
+            $ess = NGEssentials::getInstance();
 
             if (!$ess->getPlayerData()->getBool($player, PlayerData::RECONNECT)) {
-                parent::onNGLogin($event);
+                parent::onPlayerLogin($event);
             }
         }
     }
 
-    public function onMinigameQuit(MinigameQuitEvent $event): void
+    public function onMinigameQuit(PlayerQuitEvent $event): void
     {
         /** @var NGPlayer $player */
         $player = $event->getPlayer();

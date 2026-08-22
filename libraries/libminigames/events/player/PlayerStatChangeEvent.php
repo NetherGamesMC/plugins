@@ -21,31 +21,37 @@
  */
 declare(strict_types=1);
 
-namespace libminigames\events;
+namespace libminigames\events\player;
 
-use libminigames\Arena;
 use pocketmine\player\Player;
 
-class MinigameQuitEvent extends MinigameEvent
+/**
+ * Fired whenever a player's in-memory stats change inside an arena.
+ */
+class PlayerStatChangeEvent extends PlayerEvent
 {
-    public const LEAVE = 1; //PLAYER LEFT THE MATCH
-    public const END = 2; //PLAYER IS DONE IN THE MATCH
-    public const FINISH = 3; //ARENA IS FINISHED
-    public const DISCONNECT = 4; //CLIENT DISCONNECT FROM THE SERVER
-    public const PARTY = 5;
-    public const DISCONNECT_KICK = 6;
-
-    /** @var int */
-    private int $reason;
-
-    public function __construct(Player $player, Arena $arena, int $gameType, int $gameId, int $reason)
+    public function __construct(Player $player, private int $statId, private string $statName, private int $oldValue, private int $newValue)
     {
-        parent::__construct($player, $arena, $gameType, $gameId);
-        $this->reason = $reason;
+        parent::__construct($player);
     }
 
-    public function getReason(): int
+    public function getStatId(): int
     {
-        return $this->reason;
+        return $this->statId;
+    }
+
+    public function getStatName(): string
+    {
+        return $this->statName;
+    }
+
+    public function getOldValue(): int
+    {
+        return $this->oldValue;
+    }
+
+    public function getNewValue(): int
+    {
+        return $this->newValue;
     }
 }

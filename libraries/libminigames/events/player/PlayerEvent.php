@@ -21,9 +21,23 @@
  */
 declare(strict_types=1);
 
-namespace libminigames\events;
+namespace libminigames\events\player;
 
-class MinigameStartEvent extends MinigameEvent
+use libminigames\events\MinigameEvent;
+use pocketmine\player\Player;
+
+/**
+ * The base event for every player-scoped event fired by libminigames.
+ */
+abstract class PlayerEvent extends MinigameEvent
 {
+    public function __construct(private Player $player)
+    {
+        parent::__construct();
+    }
 
+    public function getPlayer(): Player
+    {
+        return $this->player;
+    }
 }

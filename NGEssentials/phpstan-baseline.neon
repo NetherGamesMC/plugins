@@ -1,6 +1,24 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Method NetherGames\\NGEssentials\\ServerManager\:\:getLobbyPlugin\(\) has invalid return type lobby\\Lobby\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/NetherGames/NGEssentials/ServerManager.php
+
+		-
+			message: '#^PHPDoc tag @var for variable \$plugin contains unknown class lobby\\Lobby\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/NetherGames/NGEssentials/ServerManager.php
+
+		-
+			message: '#^PHPDoc tag @var with type lobby\\Lobby\|null is not subtype of native type pocketmine\\plugin\\Plugin\|null\.$#'
+			identifier: varTag.nativeType
+			count: 1
+			path: src/NetherGames/NGEssentials/ServerManager.php
+
+		-
 			message: '#^Call to an undefined method pocketmine\\block\\Block\:\:getFacing\(\)\.$#'
 			identifier: method.notFound
 			count: 3
@@ -23,3 +41,51 @@ parameters:
 			identifier: parameter.unresolvableType
 			count: 6
 			path: src/NetherGames/NGEssentials/block/permutations/types/DirectionPermutation.php
+
+		-
+			message: '#^Call to an undefined method libminigames\\events\\player\\PlayerKillEvent\:\:setMessage\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/NetherGames/NGEssentials/minigames/listener/CosmeticsListener.php
+
+		-
+			message: '#^Call to an undefined method pocketmine\\player\\Player\:\:getInputMode\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: src/NetherGames/NGEssentials/minigames/listener/GameSessionBridge.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between null and null will always evaluate to true\.$#'
+			identifier: identical.alwaysTrue
+			count: 1
+			path: src/NetherGames/NGEssentials/minigames/listener/MatchmakingListener.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between int\<1, max\> and 0 will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: src/NetherGames/NGEssentials/minigames/listener/PersistenceListener.php
+
+		-
+			message: '#^Call to method getFeaturesManager\(\) on an unknown class lobby\\Lobby\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/NetherGames/NGEssentials/player/forms/Forms.php
+
+		-
+			message: '#^Call to method getIslandManager\(\) on an unknown class skyblock\\SkyBlock\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/NetherGames/NGEssentials/player/social/friends/FriendsManager.php
+
+		-
+			message: '#^Call to static method getInstance\(\) on an unknown class skyblock\\SkyBlock\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/NetherGames/NGEssentials/player/social/friends/FriendsManager.php
+
+		-
+			message: '#^PHPDoc tag @var for variable \$skyblock contains unknown class skyblock\\SkyBlock\.$#'
+			identifier: class.notFound
+			count: 1
+			path: src/NetherGames/NGEssentials/player/social/friends/FriendsManager.php

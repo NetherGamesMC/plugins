@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace conquests\tasks;
 
 use conquests\CQArena;
+use NetherGames\NGEssentials\NGEssentials;
 use pocketmine\network\mcpe\NetworkBroadcastUtils;
 use pocketmine\scheduler\Task;
 use function count;
@@ -58,7 +59,7 @@ class GeneratorTickTask extends Task
         }
 
         if (count($packets) > 0) {
-            $players = $arena->getPlugin()->getEssentials()->getPlayerManager()->unsetFPSPlayers($arena->getPlayers());
+            $players = NGEssentials::getInstance()->getPlayerManager()->unsetFPSPlayers($arena->getPlayers());
             NetworkBroadcastUtils::broadcastPackets($players, $packets);
         }
     }

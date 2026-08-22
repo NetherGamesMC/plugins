@@ -25,9 +25,6 @@ namespace libminigames\tasks;
 
 use libminigames\Arena;
 use libminigames\TeamArena;
-use NetherGames\NGEssentials\player\cosmetics\CosmeticHandler;
-use NetherGames\NGEssentials\player\NGPlayer;
-use NetherGames\NGEssentials\ServerManager;
 use pocketmine\block\inventory\ChestInventory;
 use pocketmine\block\tile\Chest;
 use pocketmine\player\Player;
@@ -93,7 +90,7 @@ abstract class MatchTimeTask extends Task
             } else if (!$arena->isOpponentlessGame() &&
                 (
                     ($arena instanceof TeamArena && count($arena->getAliveTeams()) <= 1) ||
-                    ($arena->getPlugin()->getMinigameTag() !== ServerManager::MM && count($arena->getAlivePlayers()) <= 1)
+                    count($arena->getAlivePlayers()) <= 1
                 )
             ) {
                 $this->finishArena();
@@ -185,11 +182,7 @@ abstract class MatchTimeTask extends Task
      */
     public function finishPlayer(Player $player): void
     {
-        /** @var NGPlayer $player */
-        $player->playSound('random.levelup');
-
         $this->getArena()->addSpectator($player, true);
-        CosmeticHandler::WIN_EFFECTS()->run($player, $player->getLocation());
     }
 
     /**

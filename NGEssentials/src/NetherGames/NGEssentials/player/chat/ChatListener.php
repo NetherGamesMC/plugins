@@ -42,10 +42,16 @@ class ChatListener implements Listener
     /**
      * @param PlayerChatEvent $event
      *
-     * @priority MONITOR
+     * @priority NORMAL
      */
     public function onPlayerChat(PlayerChatEvent $event): void
     {
+        // A message cancelled upstream (e.g. by a minigame handling team/channel chat) is not
+        // processed by the global chat pipeline.
+        if ($event->isCancelled()) {
+            return;
+        }
+
         $player = $event->getPlayer();
         $message = TextFormat::clean($event->getMessage(), !$player->hasPermission(Permissions::RANK_OWNER));
         $filter = $this->getChatManager()->getFilter();

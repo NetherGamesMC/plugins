@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace murdermystery\gamemodes\infection;
 
+use libminigames\utils\RewardEntry;
 use murdermystery\gamemodes\infection\tasks\MatchTimeInfectionTask;
 use murdermystery\gamemodes\MMArena;
 use murdermystery\MurderMystery;
@@ -189,28 +190,21 @@ class MMArenaInfection extends MMArena
         }
     }
 
-    public function addParticipation(Player $player, array $data, bool $guildXP = false): void
+    public function getRewards(Player $player): array
     {
-        if ($this->isWinner($player)) {
-            if ($this->isAlpha($player)) {
-                $data[self::DATA_CREDITS][] = [
-                    'Win as Alpha',
-                    5
-                ];
-            } elseif ($this->isInfected($player)) {
-                $data[self::DATA_CREDITS][] = [
-                    'Win as Infected',
-                    4
-                ];
-            } else {
-                $data[self::DATA_CREDITS][] = [
-                    'Win as Innocent',
-                    12
-                ];
-            }
+        if (!$this->isWinner($player)) {
+            return [];
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        if ($this->isAlpha($player)) {
+            return [new RewardEntry('credits', 5, 'Win as Alpha')];
+        }
+
+        if ($this->isInfected($player)) {
+            return [new RewardEntry('credits', 4, 'Win as Infected')];
+        }
+
+        return [new RewardEntry('credits', 12, 'Win as Innocent')];
     }
 
     public function getStreaksKey(): ?string

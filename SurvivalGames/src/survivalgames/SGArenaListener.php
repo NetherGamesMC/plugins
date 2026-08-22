@@ -6,7 +6,7 @@ namespace survivalgames;
 
 use libminigames\Arena;
 use libminigames\ArenaListener;
-use NetherGames\NGEssentials\events\NGChatEvent;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\block\BlockTypeIds;
 use pocketmine\block\inventory\ChestInventory;
@@ -22,6 +22,7 @@ use pocketmine\event\inventory\CraftItemEvent;
 use pocketmine\event\inventory\InventoryCloseEvent;
 use pocketmine\event\inventory\InventoryOpenEvent;
 use pocketmine\event\player\PlayerBucketEmptyEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\item\Bucket;
 use pocketmine\math\Vector3;
@@ -121,7 +122,7 @@ class SGArenaListener extends ArenaListener
 
         if ($player instanceof Player) {
             $cause = $event->getCause();
-            $ess = $this->getArena()->getPlugin()->getEssentials();
+            $ess = NGEssentials::getInstance();
 
             if ($this->getArena()->hasFlags(SGArena::PLAYERS_INVINCIBLE)) {
                 $event->cancel();
@@ -135,7 +136,7 @@ class SGArenaListener extends ArenaListener
                             $damager = $event->getDamager();
 
                             if ($damager instanceof Player) {
-                                $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getDisplayName(), $damager->getDisplayName()], $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause())), true);
+                                $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getDisplayName(), $damager->getDisplayName()], $this->getArena()->getKillMessage($damager, $player, $event->getCause())), true);
 
                                 $this->getArena()->addKill($damager, $player);
                                 $this->onPlayerDeath($player);
@@ -150,7 +151,7 @@ class SGArenaListener extends ArenaListener
                     case EntityDamageEvent::CAUSE_CUSTOM:
                         // The player was killed by cactus, cACtUs
                         if ($cause === EntityDamageEvent::CAUSE_CONTACT && $event instanceof EntityDamageByBlockEvent) {
-                            $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $player->getDisplayName(), $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause())), true);
+                            $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $player->getDisplayName(), $this->getArena()->getKillMessage(null, $player, $event->getCause())), true);
                             $this->onPlayerDeath($player);
                             return;
                         }
@@ -158,7 +159,7 @@ class SGArenaListener extends ArenaListener
                         if (($damager = $ess->getCombatLogger()->getLatestHit($player)) !== null && $this->getArena()->isInArena($damager)) {
                             $cause = ($event->getCause() === EntityDamageEvent::CAUSE_CUSTOM || $event->getCause() === EntityDamageEvent::CAUSE_CONTACT) ? EntityDamageEvent::CAUSE_ENTITY_ATTACK : $event->getCause();
 
-                            $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getDisplayName(), $damager->getDisplayName()], $this->getArena()->getPlugin()->getRandomKillMessage($cause, true)), true);
+                            $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getDisplayName(), $damager->getDisplayName()], $this->getArena()->getKillMessage($damager, $player, $cause)), true);
 
                             $this->getArena()->addKill($damager, $player);
 
@@ -180,20 +181,20 @@ class SGArenaListener extends ArenaListener
                                 } else if ($currentEvent === SGEventManager::CREEPER_MANIA) {
                                     $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $player->getDisplayName(), "{PLAYER} §r§7is no match against a horde of creepers!"));
                                 } else {
-                                    $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $player->getDisplayName(), $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause())), true);
+                                    $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $player->getDisplayName(), $this->getArena()->getKillMessage(null, $player, $event->getCause())), true);
                                 }
                                 /** @phpstan-ignore-next-line - PHPStan doesn't know about the border and determines that these checks don't co-exist in PMMP */
                             } else if ($cause === EntityDamageEvent::CAUSE_CONTACT && !($event instanceof EntityDamageByBlockEvent)) {
                                 $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $player->getDisplayName(), "{PLAYER} §r§7was killed by the border.")); // superlative?
                             } else {
-                                $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $player->getDisplayName(), $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause())), true);
+                                $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $player->getDisplayName(), $this->getArena()->getKillMessage(null, $player, $event->getCause())), true);
                             }
 
                             $this->onPlayerDeath($player);
                         }
                         break;
                     default:
-                        $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $player->getDisplayName(), $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause())), true);
+                        $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $player->getDisplayName(), $this->getArena()->getKillMessage(null, $player, $event->getCause())), true);
                         $this->onPlayerDeath($player, false);
                         break;
                 }
@@ -254,9 +255,9 @@ class SGArenaListener extends ArenaListener
 
         // Gameplay: Check for player last combat after leaving a game. (They can quit the game after getting shot by bow or scared)
         if ($arena->isRunning() && !$arena->isSpectator($player)) {
-            $ess = $arena->getPlugin()->getEssentials();
+            $ess = NGEssentials::getInstance();
             if (($damager = $ess->getCombatLogger()->getLatestHit($player)) !== null && $arena->isInArena($damager)) {
-                $arena->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getDisplayName(), $damager->getDisplayName()], $arena->getPlugin()->getRandomKillMessage(EntityDamageEvent::CAUSE_ENTITY_ATTACK, true)), true);
+                $arena->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getDisplayName(), $damager->getDisplayName()], $arena->getKillMessage($damager, $player, EntityDamageEvent::CAUSE_ENTITY_ATTACK)), true);
 
                 $arena->addKill($damager, $player);
             }
@@ -281,18 +282,14 @@ class SGArenaListener extends ArenaListener
         }
     }
 
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
         $player = $event->getPlayer();
 
         if ($this->getArena()->isSpectator($player)) {
-            $event->setDisplayName(TextFormat::clean($player->getDisplayName()));
+            $event->setMessage('§7Dead Chat > ' . $event->getMessage());
             $event->setRecipients($this->getArena()->getSpectators());
-            $event->setPrefix('§7Dead Chat > ');
-            $event->setStaffPrefix('§7Dead Chat Relay > ');
-            $event->setSplitter(': ');
-        } else {
-            $event->setDisplayName($player->getDisplayName());
+            $this->dispatchScopedChat($event);
         }
     }
 }

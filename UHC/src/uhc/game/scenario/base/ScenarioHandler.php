@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace uhc\game\scenario\base;
 
-use libminigames\events\MinigameStartEvent;
+use libminigames\events\arena\ArenaStartEvent;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\inventory\CraftItemEvent;
@@ -51,13 +51,13 @@ trait ScenarioHandler
         }
     }
 
-    public function onMinigameStart(MinigameStartEvent $event): void
+    public function onArenaStart(ArenaStartEvent $event): void
     {
         foreach (ScenarioRegistry::getAll() as $scenario) {
             if (!$this->getArena()->isScenarioEnabled($scenario)) {
                 continue;
             }
-            $scenario->onMinigameStart($event);
+            $scenario->onArenaStart($event);
         }
     }
 }

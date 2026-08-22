@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace skywars\handler;
 
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use NetherGames\NGEssentials\utils\TextUtils;
 use pocketmine\utils\TextFormat;
@@ -15,7 +16,7 @@ class DuelsHandler extends BaseHandler
         parent::startGame();
 
         $arena = $this->arena;
-        $essentials = $this->plugin->getEssentials();
+        $essentials = NGEssentials::getInstance();
         $playerData = $essentials->getPlayerData();
         $playerManager = $essentials->getPlayerManager();
 
@@ -152,7 +153,7 @@ class DuelsHandler extends BaseHandler
                         if (!in_array($player, $team->getAlivePlayers(), true)) {
                             $health = 0;
                         }
-                        $opponent = [$arena->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($player), $health];
+                        $opponent = [NGEssentials::getInstance()->getPlayerManager()->getPlayerName($player), $health];
                     }
                     break;
                 }
@@ -172,7 +173,7 @@ class DuelsHandler extends BaseHandler
                         if (!in_array($player, $team->getAlivePlayers(), true)) {
                             $health = 0;
                         }
-                        $opponent[$key++] = [$arena->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($player), $health];
+                        $opponent[$key++] = [NGEssentials::getInstance()->getPlayerManager()->getPlayerName($player), $health];
                     }
                     break;
                 }

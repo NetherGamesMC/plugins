@@ -11,6 +11,7 @@ use libminigames\utils\AutoUpgrader;
 use libVanilla\features\Feature;
 use libVanilla\VanillaPlugin;
 use muqsit\invmenu\InvMenuHandler;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\utils\SkinUtils;
 use pocketmine\entity\Skin;
 use pocketmine\player\Player;
@@ -42,7 +43,7 @@ class SurvivalGames extends Minigame
 
     public function registerClasses(): void
     {
-        $ess = $this->getEssentials();
+        $ess = NGEssentials::getInstance();
 
         $directory = 'skins' . DIRECTORY_SEPARATOR . 'objects' . DIRECTORY_SEPARATOR . 'graveyard' . DIRECTORY_SEPARATOR;
         $geometry = $ess->getResource($directory . 'tombstone.json');

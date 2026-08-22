@@ -24,6 +24,7 @@ namespace soccer;
 use libminigames\Minigame;
 use libminigames\tasks\CountDownTask;
 use libminigames\TeamArena;
+use libminigames\utils\RewardEntry;
 use soccer\utils\StatsData;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
@@ -75,7 +76,6 @@ class SCArena extends TeamArena
 
     public function sendStats(): void
     {
-        $this->getStatsData()->sendLeaderboard($this, StatsData::SC_GOALS, '§l§aTOP SCORERS');
     }
 
     public function addGoal(Player $player): void
@@ -95,30 +95,29 @@ class SCArena extends TeamArena
 
     }
 
-    public function addParticipation(Player $player, array $data, bool $guildXP = false): void
+    /**
+     * @param Player $player
+     * @return RewardEntry[]
+     */
+    public function getRewards(Player $player): array
     {
-        if (($goals = $this->getStatsData()->getValue($player, StatsData::SC_GOALS)) > 0) {
-            $data[self::DATA_XP][] = [
-                $goals . ' Goal' . ($goals > 1 ? 's' : ''),
-                $goals * 3
-            ];
+        $rewards = [];
+        $goals = $this->getStatsData()->getValue($player, StatsData::SC_GOALS);
 
-            $data[self::DATA_CREDITS][] = [
-                $goals . ' Goal' . ($goals > 1 ? 's' : ''),
-                $goals
-            ];
+        if ($goals > 0) {
+            $label = $goals . ' Goal' . ($goals > 1 ? 's' : '');
+
+            $rewards[] = new RewardEntry('xp', $goals * 3, $label);
+            $rewards[] = new RewardEntry('credits', $goals, $label);
         } elseif ($goals < 0) {
             $this->getStatsData()->addValue($player, StatsData::SC_GOALS, abs($goals));
         }
 
         if ($this->isWinner($player)) {
-            $data[self::DATA_CREDITS][] = [
-                "Win",
-                4
-            ];
+            $rewards[] = new RewardEntry('credits', 4, 'Win');
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        return $rewards;
     }
 
     public function getTeamWithHighestScore(): ?SCTeam

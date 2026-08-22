@@ -30,11 +30,10 @@ use libminigames\Arena;
 use libminigames\Minigame;
 use libminigames\TeamArena;
 use libminigames\utils\Autoloader;
-use libminigames\utils\LeaderboardData;
 use libVanilla\VanillaPlugin;
 use muqsit\invmenu\InvMenuHandler;
 use muqsit\invmenu\type\util\InvMenuTypeBuilders;
-use NetherGames\NGEssentials\ServerManager;
+use NetherGames\NGEssentials\minigames\LeaderboardData;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\data\SavedDataLoadingException;
 use pocketmine\entity\EntityDataHelper as Helper;
@@ -98,8 +97,6 @@ final class Bedwars extends Minigame
         $arenaConfig->save();
         $this->arenaConfig = new BWArenaConfig($arenaConfig);
 
-        $this->leaderboards = new LeaderboardData($this->getModes());
-
         $this->getServer()->getCommandMap()->register(BWCommand::class, new BWCommand($this));
 
         $this->getServer()->getPluginManager()->registerEvents(new BWListener($this), $this);
@@ -121,6 +118,11 @@ final class Bedwars extends Minigame
         $this->blockQueue = new BlockQueueTask($this->getServer());
         $this->getScheduler()->scheduleRepeatingTask($this->blockQueue, 10);
 
+        $this->leaderboards = new LeaderboardData($this->getModes());
+        foreach ($this->getModes() as $i => $mode) {
+            $this->getLeaderboards()->load('bw_*mode*_wins', $i, -1, '§l§a*MODE* WINS LEADERBOARD', '§7Most Bedwars *mode* wins');
+        }
+
         if (!InvMenuHandler::isRegistered()) {
             InvMenuHandler::register($this);
         }
@@ -139,15 +141,6 @@ final class Bedwars extends Minigame
         }
 
         VanillaPlugin::FIREBALL()->register($this);
-
-        foreach ($this->getModes() as $i => $mode) {
-            $this->getLeaderboards()->load('bw_*mode*_wins', $i, -1, '§l§a*MODE* WINS LEADERBOARD', '§7Most Bedwars *mode* wins');
-        }
-    }
-
-    public function getLeaderboards(): LeaderboardData
-    {
-        return $this->leaderboards;
     }
 
     public function getModes(): array
@@ -202,11 +195,6 @@ final class Bedwars extends Minigame
         return $messages[array_rand($messages)];
     }
 
-    public function getMinigameTag(): string
-    {
-        return ServerManager::BW;
-    }
-
     public function generateDrop(Player $player, ?Player $damager = null, bool $quit = false): void
     {
         $iron = 0;
@@ -258,5 +246,10 @@ final class Bedwars extends Minigame
     public function getBlockQueue(): BlockQueueTask
     {
         return $this->blockQueue;
+    }
+
+    public function getLeaderboards(): LeaderboardData
+    {
+        return $this->leaderboards;
     }
 }

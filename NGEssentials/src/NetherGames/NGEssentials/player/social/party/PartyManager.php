@@ -41,6 +41,7 @@ use NetherGames\NGEssentials\servers\Server;
 use pocketmine\network\mcpe\protocol\types\InputMode;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
+use Ramsey\Uuid\Uuid;
 use function array_diff;
 use function array_key_last;
 use function array_rand;
@@ -497,7 +498,7 @@ class PartyManager
 
     public function createParty(Player $player): Party
     {
-        $party = new Party($player->getName());
+        $party = new Party($player->getName(), uuid: Uuid::uuid4());
         $this->addParty($party);
 
         return $party;

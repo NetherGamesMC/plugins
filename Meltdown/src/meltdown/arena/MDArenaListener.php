@@ -4,7 +4,6 @@ namespace meltdown\arena;
 
 use libminigames\ArenaListener;
 use meltdown\utils\Items;
-use NetherGames\NGEssentials\events\NGChatEvent;
 use pocketmine\block\Block;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Entity;
@@ -16,10 +15,10 @@ use pocketmine\event\entity\EntityEffectAddEvent;
 use pocketmine\event\entity\EntityEffectRemoveEvent;
 use pocketmine\event\entity\EntityExplodeEvent;
 use pocketmine\event\entity\ProjectileHitBlockEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
-use pocketmine\utils\TextFormat;
 use pocketmine\world\Explosion;
 use pocketmine\world\Position;
 use function array_map;
@@ -27,17 +26,13 @@ use function in_array;
 
 class MDArenaListener extends ArenaListener{
 
-    public function onPlayerChat(NGChatEvent $event) : void{
+    public function onPlayerChat(PlayerChatEvent $event) : void{
         $player = $event->getPlayer();
 
         if($this->getArena()->isSpectator($player)){
-            $event->setDisplayName(TextFormat::clean($player->getDisplayName()));
             $event->setRecipients($this->getArena()->getSpectators());
-            $event->setPrefix('§7Dead Chat > ');
-            $event->setStaffPrefix('§7Dead Chat Relay > ');
-            $event->setSplitter(': ');
-        }else{
-            $event->setDisplayName($player->getDisplayName());
+            $event->setMessage('§7Dead Chat > ' . $event->getMessage());
+            $this->dispatchScopedChat($event);
         }
     }
 

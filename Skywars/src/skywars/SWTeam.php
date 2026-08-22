@@ -24,6 +24,7 @@ namespace skywars;
 use libminigames\Team;
 use libminigames\TeamArena;
 use libminigames\utils\StatsData as StatsDataAlias;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\permissions\Permissions;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\player\Player;
@@ -61,7 +62,7 @@ class SWTeam extends Team
 
         $arena = $this->getArena();
         if ($arena->isRunning() && !$arena->isSpectator($player)) {
-            $ess = $arena->getPlugin()->getEssentials();
+            $ess = NGEssentials::getInstance();
 
             $combatLogger = $ess->getCombatLogger();
             $log = $combatLogger->getLog($player);
@@ -70,7 +71,7 @@ class SWTeam extends Team
             }
 
             if (($damager = $combatLogger->getLatestHit($player)) !== null && $arena->isInArena($damager)) {
-                $arena->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getNameTag(), $damager->getNameTag()], $arena->getPlugin()->getRandomKillMessage(1)), true);
+                $arena->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getNameTag(), $damager->getNameTag()], $arena->getKillMessage($damager, $player, 1)), true);
 
                 $arena->addKill($damager, $player);
             }

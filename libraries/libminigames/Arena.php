@@ -24,34 +24,28 @@ declare(strict_types=1);
 namespace libminigames;
 
 use libasyncio\FileCopyAsyncTask;
-use libforms\elements\Button;
-use libforms\FormManager;
-use libminigames\events\MinigameJoinEvent;
-use libminigames\events\MinigameQuitEvent;
-use libminigames\events\MinigameStartEvent;
+use libminigames\events\arena\ArenaCreateEvent;
+use libminigames\events\arena\ArenaEndEvent;
+use libminigames\events\arena\ArenaStartEvent;
+use libminigames\events\arena\ArenaStatusChangeEvent;
+use libminigames\events\arena\MatchResult;
+use libminigames\events\arena\PlayerMatchStats;
+use libminigames\events\player\PlayerJoinEvent;
+use libminigames\events\player\PlayerKillEvent;
+use libminigames\events\player\PlayerMapVoteEvent;
+use libminigames\events\player\PlayerQuitEvent;
+use libminigames\events\player\PlayerRequeueEvent;
+use libminigames\session\GameSession;
 use libminigames\settings\EmptyGameSettings;
 use libminigames\settings\GameSettings;
 use libminigames\utils\ArenaConfig;
+use libminigames\utils\Icon;
 use libminigames\utils\Items;
+use libminigames\utils\RewardEntry;
+use libminigames\utils\scoreboard\Scoreboard;
 use libminigames\utils\StatsData;
-use libminigames\utils\Streaks;
-use libminigames\utils\streaks\Streak;
-use libminigames\utils\Utils;
-use libReplay\session\record\Recording;
-use libReplay\session\record\RecordManager;
-use NetherGames\NGEssentials\NGEssentials;
-use NetherGames\NGEssentials\player\chat\kafka\type\TextType;
-use NetherGames\NGEssentials\player\cosmetics\CosmeticHandler;
-use NetherGames\NGEssentials\player\GameSettings as PlayerGameSettings;
-use NetherGames\NGEssentials\player\NGPlayer;
-use NetherGames\NGEssentials\player\permissions\Permissions;
-use NetherGames\NGEssentials\player\PlayerData;
-use NetherGames\NGEssentials\player\social\party\objects\Party;
-use NetherGames\NGEssentials\ServerManager;
-use NetherGames\NGEssentials\thread\NGThreadPool;
-use NetherGames\NGEssentials\utils\CustomIcon;
-use NetherGames\NGEssentials\utils\MySQLCredentials;
-use NetherGames\NGEssentials\utils\scoreboard\Scoreboard;
+use libminigames\utils\TextType;
+use libminigames\utils\TextUtils;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
 use pocketmine\entity\Location;
@@ -59,6 +53,7 @@ use pocketmine\network\mcpe\protocol\SetDisplayObjectivePacket;
 use pocketmine\network\mcpe\protocol\types\InputMode;
 use pocketmine\player\GameMode;
 use pocketmine\player\Player;
+use pocketmine\Server;
 use pocketmine\utils\Limits;
 use pocketmine\utils\TextFormat;
 use pocketmine\world\World;
@@ -72,61 +67,44 @@ use function array_keys;
 use function array_merge;
 use function array_rand;
 use function array_unique;
-use function ceil;
 use function count;
 use function implode;
 use function in_array;
 use function max;
 use function mt_rand;
-use function number_format;
-use function rand;
-use function shuffle;
 use function strtoupper;
-use function strval;
 use function time;
 
-// [PHPStorm] CTRL + Q each phpdoc for better reading.
-// [VSCode] Well goodluck.
-
 /**
- * An abstract representation of an arena
+ * An abstract representation of an arena.
  *
  * <p>Newly created arenas will have its own mode, you need to check for these modes in order
- * to work properly. {@link Arena} class provides its own player & spectator data, listener class
+ * to work properly. {@link Arena} class provides its own player & spectator data, listening class
  * which are restricted (You have to enable a global listener {@link MinigameListener}), maps voting,
  * scoreboards and private games.
  *
- * <p>The concept of an arena can also have its own types which is specified by an interface class {@link TypeArena}.
- * For example, you would want to have 2 modes which is easy, medium, and insane, players can decide to vote
- * which type they would want to play. However, you will have to create your own voting forms.
+ * <p>This class is engine-only: every NetherGames-specific decision (rewards, parties, economy,
+ * matchmaking) is exposed through the events this class fires, and consumed outside of this library.
  *
- * <p>Implementing listeners, the listeners object in this class is a non-listener interface. Which means that, all events
+ * <p>Implementing listeners, the listener object in this class is a non-listener interface. Which means that, all events
  * that is being called will be filtered in a global listener event {@link MinigameListener} and being passed to this arena
  * class {@link ArenaListener}, snippet below will explain on how to implement this:
  *
  * <code>
- *  public function __construct(...){
+ *  public function __construct(...) {
  *      parent::__construct(...);
- *
- *      // Make sure you call this method in constructor class.
- *      // But please take note that this is just an example, actual implementation
- *      // Of this method is to must override this class.
  *      $this->listener = new ArenaListener($this);
  *      ...
  *  }
  * </code>
  *
- * <p>For further understanding, I will link you some of the most used functions in this class
- * Try to make yourself useful by looking at these functions. Well, don't be so strict while using
- * this module, you can always try to override any functions that is not marked as final. This class
- * allows programmer to do your own things easily, try not to get in stuck while doing simple things.
  * <p>{@see Arena::bootMinigame()}
  * <p>{@see Arena::startGame()}
  * <p>{@see Arena::finishGame()}
  * <p>{@see Arena::getPlayers()}
  * <p>{@see Arena::setupMapFeatures()}
  * <p>{@see Arena::getMinimumPlayers()}
- * <p>{@see Arena::addParticipation()}
+ * <p>{@see Arena::getRewards()}
  *
  * @package libminigames
  */
@@ -136,10 +114,6 @@ abstract class Arena
     public const STATUS_STARTING = 1;   // Waiting lobby but map is decided.
     public const STATUS_RUNNING = 2;    // Cages + Game running.
     public const STATUS_FINISHING = 3;  // Game has being finished.
-
-    public const DATA_XP = 0;
-    public const DATA_CREDITS = 1;
-    public const DATA_COINS = 2;
 
     /** @var string[] */
     protected array $maps = [];
@@ -157,22 +131,18 @@ abstract class Arena
     private array $players = [];
     /** @var Player[] */
     private array $spectators = [];
-    /** @var Party|null */
-    private ?Party $party = null;
+    /** @var Player|null */
+    private ?Player $creator = null;
     /** @var array<int, int> */
     private array $mapVotes = [];
-    /** @var int */
-    private int $xpBoost = 0;
-    /** @var Scoreboard */
-    private Scoreboard $scoreboard;
+    /** @var Scoreboard|null */
+    private ?Scoreboard $scoreboard = null;
     /** @var int */
     private int $status = self::STATUS_WAITING;
     /** @var GameSettings */
     private GameSettings $settings;
     /** @var array<string, string> */
     private array $xuids = [];
-    /** @var ?int */
-    private ?int $replayId = null;
     /** @var int */
     private int $startTime;
     /** @var bool */
@@ -180,22 +150,18 @@ abstract class Arena
     /** @var bool */
     private bool $startImmediately = false;
 
-
     /**
      * The {@link Arena} abstract constructor.
      *
      * <p>During initialization of an arena, this constructor will handle the game arena
      * and its matches, it will copy an arena world from plugin data directory <code>/arenas</code> into
-     * server worlds directory as <code>Match-x-y</code> where x is the minigame name and y is the numerical <code>$id</code>.
+     * server worlds directory as <code>Match-<tag>-<id></code>.
      *
      * <p>After the world has successfully being copied, it will then call {@link Arena::bootMinigame()} where you
      * will have to register your own {@link CountDownTask} task.
      *
-     * <p>Note to developers: Please do make sure that your worlds doesn't contains any periods on the
-     * beginning of a filename, this will cause an issue upon deleting the world.
-     *
      * @param Minigame $plugin Your minigame class.
-     * @param int $modeId The mode of an arena.
+     * @param int $modeId The mode of the arena.
      * @param int $id The id of an arena itself, this number must be different than others.
      * @param bool $privateGame Indicates if this arena is a private match.
      */
@@ -215,7 +181,7 @@ abstract class Arena
             $saveName = $this->getMapDisplayName();
         }
 
-        NGThreadPool::getInstance()->submitTask(new FileCopyAsyncTask(Path::join($this->getPlugin()->getDataFolder(), $saveName), Path::join($this->getPlugin()->getServer()->getDataPath(), 'worlds', $worldName), function () use ($worldName) {
+        Server::getInstance()->getAsyncPool()->submitTask(new FileCopyAsyncTask(Path::join($this->getPlugin()->getDataFolder(), $saveName), Path::join($this->getPlugin()->getServer()->getDataPath(), 'worlds', $worldName), function () use ($worldName) {
             $worldManager = $this->getPlugin()->getServer()->getWorldManager();
             $worldManager->loadWorld($worldName);
             $world = $worldManager->getWorldByName($worldName);
@@ -231,9 +197,11 @@ abstract class Arena
             }
         }));
 
-        $this->scoreboard = new Scoreboard(TextFormat::GOLD . TextFormat::BOLD . strtoupper($this->getPlugin()->getMinigameName()), SetDisplayObjectivePacket::DISPLAY_SLOT_SIDEBAR, SetDisplayObjectivePacket::SORT_ORDER_DESCENDING);
+        $this->scoreboard = $this->createScoreboard();
         // If the settings passed is null, then we will use the skeleton class as default.
         $this->settings = $settings ?? new EmptyGameSettings();
+
+        (new ArenaCreateEvent($this))->call();
     }
 
     public function getPlugin(): Minigame
@@ -252,52 +220,19 @@ abstract class Arena
     }
 
     /**
-     * Perform anything appropriate to the game after the world lobby/arena has successfully being copied
-     * and being loaded. You must schedule an {@link CountDownTask} task here.
+     * Perform anything appropriate to the game after the world lobby/arena has successfully been copied
+     * and has been loaded. You must schedule an {@link CountDownTask} task here.
      */
     abstract public function bootMinigame(): void;
 
-    /**
-     * This method is used as a way to update the game settings of the world.
-     * This method will be called when the creator of the private match has joined.
-     */
-    final public function registerGameSettings(Party $party): void
-    {
-        $this->party = $party;
-        $leader = $party->getLeader();
-        if ($leader === null) {
-            return;
-        }
-
-        $ess = $this->getPlugin()->getEssentials();
-        $serverManager = $ess->getServerManager();
-
-        // This will attempt to override the settings to match that of the player's configured ones.
-        $settings = $this->settings->fetchFromPlayer(
-            player: $leader,
-            serverType: $serverManager->getServerType(),
-            gameType: $serverManager->getGameType()
-        );
-        // If the settings are null, then we will use the skeleton class as default.
-        if ($settings === null) {
-            return;
-        }
-        // Finally, we update the settings to match the player's.
-        $this->settings = $settings;
-    }
-
     public function playKillCosmetics(Player $player): void
     {
-        if (!$player->isSpectator()) {
-            CosmeticHandler::KILL_EFFECTS()->run($player, $location = $player->getLocation());
-            CosmeticHandler::KILL_SOUNDS()->run($player, $location);
-        }
+        // Kill cosmetics are handled externally by listening to {@see PlayerKillEvent}.
     }
 
     /**
      * Send game analytics data to all the players in arena, this function will usually be called after a match
-     * has completed. Put in some efforts while trying to write the statistics, or simply broadcast top deaths
-     * for this match.
+     * has completed.
      */
     public function sendStats(): void
     {
@@ -305,19 +240,9 @@ abstract class Arena
     }
 
     /**
-     * Attempts to push queued players from an array object {@link Arena::$queuedPlayers}. This is operation
+     * Attempts to push queued players from an array object {@link Arena::$queuedPlayers}. This operation
      * is based on FIFO (First-In-First-Out) order which means, players who queued into this arena will always
      * be handled first.
-     *
-     * <h3>Program functions and its characteristics</h3>
-     *
-     * The function act as a **queue service for an arena**, a newly created arena will always be queued into this class.
-     * Or simply put, each server instances running will always have 1 queue instance. This is to ensure the game which
-     * is currently running or finished will not be queued into, which is handled by task {@link CountDownTask}.
-     *
-     * <p>The other function for this method is to **handle all inbound players** that has been queued to. You can override
-     * this function in order to get these players before it is being queued into this arena. A programmer should always
-     * call parent function {@link Arena::addQueuedPlayers()} after handling queued players.
      */
     public function addQueuedPlayers(): void
     {
@@ -335,38 +260,123 @@ abstract class Arena
         }
 
         if (count($queuedPlayers) > 0) {
-            $plugin = $this->getPlugin();
-            $scoreboard = $this->getScoreboard();
-            $modeName = $plugin->getModeName($this->getModeId());
-            $maxSize = $this->getMaxSize();
-            $playerCount = count($this->getPlayers(false));
+            if ($this->hasScoreboard()) {
+                $scoreboard = $this->getScoreboard();
 
-            $scoreboard->setLine($this->getPlayers(), 7, CustomIcon::PLAYERS_TINY . TextFormat::GREEN . $playerCount . '/' . $maxSize);
-
-            foreach ($queuedPlayers as $player) {
-                $scoreboard->addPlayer($player);
+                foreach ($queuedPlayers as $player) {
+                    $scoreboard->addPlayer($player);
+                }
             }
-
-            $scoreboard->setLines($queuedPlayers, [
-                    1 => CustomIcon::NETHERGAMES . TextFormat::GOLD . 'ngmc.co',
-                    2 => '',
-                    3 => CustomIcon::GAMEMODE . TextFormat::GREEN . $modeName,
-                    4 => '',
-                    5 => CustomIcon::HOURGLASS . match (true) {
-                            $this->getGameSettings()->isPaused() => TextFormat::RED . "Paused",
-                            $playerCount >= $this->getMinimumPlayers() => TextFormat::GREEN . 'Starting',
-                            default => TextFormat::RED . "Waiting",
-                        },
-                    6 => '',
-                    7 => CustomIcon::PLAYERS_TINY . TextFormat::GREEN . $playerCount . '/' . $maxSize,
-                    8 => ''
-                ]
-            );
         }
     }
 
+    /**
+     * Refreshes the waiting-lobby scoreboard for all players in this arena.
+     *
+     * <p>No-op when the scoreboard is disabled (see {@see Arena::createScoreboard()}). The full
+     * line layout comes from {@see Arena::getWaitingScoreboardLines()}.
+     *
+     * @param int $countdown The current countdown value displayed by the waiting lobby.
+     * @param bool $paused Whether the waiting lobby is currently paused.
+     */
+    public function refreshWaitingScoreboard(int $countdown, bool $paused): void
+    {
+        if (!$this->hasScoreboard()) {
+            return;
+        }
+
+        $this->getScoreboard()->setLines($this->getPlayers(), $this->getWaitingScoreboardLines($countdown, $paused));
+    }
+
+    /**
+     * Returns the full waiting-lobby scoreboard frame (rebuild the whole sidebar).
+     *
+     * <p>Override this method to fully customize the waiting-lobby scoreboard, including its footer,
+     * icons, and row layout. The default uses generic descriptor glyphs via {@see Icon} (rendered as
+     * empty strings when not registered) and a configurable footer from the <code>tagline</code> config
+     * key (empty by default).
+     *
+     * @param int $countdown The current countdown value in seconds.
+     * @param bool $paused Whether the waiting lobby is currently paused.
+     * @return array<int, string>
+     */
+    protected function getWaitingScoreboardLines(int $countdown, bool $paused): array
+    {
+        $plugin = $this->getPlugin();
+        $modeName = $plugin->getModeName($this->getModeId());
+        $maxSize = $this->getMaxSize();
+        $playerCount = count($this->getPlayers(false));
+
+        $status = $paused ? TextFormat::RED . "Paused" : ($playerCount >= $this->getMinimumPlayers() ? TextFormat::GREEN . 'Starting' : TextFormat::RED . "Waiting");
+
+        $tagline = $this->getPlugin()->getConfig()->get('tagline', '');
+        $footer = Icon::get('footer', is_string($tagline) ? $tagline : '');
+
+        return [
+            1 => $footer !== '' ? TextFormat::GOLD . $footer : '',
+            2 => '',
+            3 => Icon::get('gamemode') . TextFormat::GREEN . $modeName,
+            4 => '',
+            5 => Icon::get('hourglass') . $status,
+            6 => '',
+            7 => Icon::get('players') . TextFormat::GREEN . $playerCount . '/' . $maxSize,
+            8 => ''
+        ];
+    }
+
+    /**
+     * Returns the players in this arena that are currently alive (non-spectators).
+     *
+     * @return Player[]
+     */
+    public function getAlivePlayers(): array
+    {
+        return array_diff($this->getPlayers(false), $this->getSpectators());
+    }
+
+    /**
+     * Creates the scoreboard this arena uses, or returns <code>null</code> to disable it entirely.
+     *
+     * <p>Override this method to change the title/display slot/sort order, return a custom
+     * {@see Scoreboard} implementation, or disable the scoreboard by returning <code>null</code>.
+     * The default builds the classic waiting-lobby board with the minigame name as the title.
+     *
+     * @return Scoreboard|null
+     */
+    protected function createScoreboard(): ?Scoreboard
+    {
+        return new Scoreboard(TextFormat::GOLD . TextFormat::BOLD . strtoupper($this->getPlugin()->getMinigameName()), SetDisplayObjectivePacket::DISPLAY_SLOT_SIDEBAR, SetDisplayObjectivePacket::SORT_ORDER_DESCENDING);
+    }
+
+    /**
+     * Returns whether this arena has a scoreboard enabled.
+     *
+     * <p>Always guards scoreboard access with this method before using {@see Arena::getScoreboard()}
+     * when the arena is able to disable it (see {@see Arena::createScoreboard()}).
+     *
+     * @return bool
+     */
+    public function hasScoreboard(): bool
+    {
+        return $this->scoreboard !== null;
+    }
+
+    /**
+     * Returns this arena's scoreboard.
+     *
+     * <p>Calling this method while the scoreboard is disabled (i.e. {@see Arena::createScoreboard()}
+     * returned <code>null</code>) throws a {@see RuntimeException}. Guard calls with
+     * {@see Arena::hasScoreboard()} when the arena may disable the board.
+     *
+     * @return Scoreboard
+     * @throws RuntimeException if the scoreboard is disabled.
+     */
     public function getScoreboard(): Scoreboard
     {
+        if ($this->scoreboard === null) {
+            throw new RuntimeException('Scoreboard is disabled for this arena');
+        }
+
         return $this->scoreboard;
     }
 
@@ -379,8 +389,6 @@ abstract class Arena
      * Returns a maximum player of a specified mode given, this function must be
      * a hardcoded value, to make it simple, every mode will have its own constant
      * maximum players so that arena config will no longer in need to be configured.
-     *
-     * You can use the getModeId() function to get the mode id.
      *
      * @return int
      */
@@ -409,19 +417,21 @@ abstract class Arena
 
     public function getWaitingLobbySpawn(): Location
     {
-        $location = $this->getPlugin()->getEssentials()->getServerManager()->getSpawn();
+        $world = $this->world ?? $this->getPlugin()->getServer()->getWorldManager()->getDefaultWorld();
 
-        if ($this->world !== null) {
-            $location->world = $this->world;
+        if ($world === null) {
+            throw new RuntimeException('No world is available to serve as the waiting lobby.');
         }
 
-        return $location;
+        return Location::fromObject($world->getSafeSpawn(), $world);
     }
 
     /**
      * Attempts to add a player into this arena. This is an internal function and a programmer should not
      * override this function. You can however, attempt to override {@link Arena::addQueuedPlayers()} only if
-     * you are not using {@link TeamArena} class, redirect to the function docs for further explanation.
+     * you are not using {@link TeamArena} class.
+     *
+     * <p>Players that share the same group UUID (see {@see GameSession::getGroupUUID()}) are added as a single unit.
      *
      * @param Player $player
      * @param bool $force
@@ -431,25 +441,31 @@ abstract class Arena
     final public function addPlayer(Player $player, bool $force = false): bool
     {
         $isPrivate = $this->isPrivateGame();
+        $players = [$player];
 
-        $socialManager = $this->getPlugin()->getEssentials()->getPlayerManager()->getSocialManager();
-        if (!$force && ($party = $socialManager->getPartyManager()->getParty($player)) !== null) {
-            $players = $socialManager->getPartyManager()->getPlayers($party);
-            $partyMembers = array_diff($players, [$player]);
+        if (!$force) {
+            $groupUUID = GameSession::getSession($player)->getGroupUUID();
 
-            foreach ($partyMembers as $p) {
-                if ($this->getPlugin()->getEssentials()->getPlayerData()->getBool($p, PlayerData::TRACK)) {
-                    $player->sendMessage(TextFormat::RED . $p->getName() . ' is tracking someone. Please wait for them to leave.');
-                    return false;
+            if ($groupUUID !== null) {
+                $groupedPlayers = [];
+
+                foreach ($this->getPlugin()->getServer()->getOnlinePlayers() as $p) {
+                    if (GameSession::getSession($p)->getGroupUUID()?->equals($groupUUID)) {
+                        $groupedPlayers[] = $p;
+                    }
+                }
+
+                if (count($groupedPlayers) > 0) {
+                    $players = $groupedPlayers;
                 }
             }
 
-            foreach ($partyMembers as $p) {
-                if (($arena = $this->getPlugin()->getArena($p)) !== null) {
-                    $arena->removePlayer($p, MinigameQuitEvent::PARTY);
+            foreach ($players as $p) {
+                if (($otherArena = $this->getPlugin()->getArena($p)) !== null) {
+                    $otherArena->removePlayer($p, PlayerQuitEvent::PARTY);
                 }
 
-                $event = new MinigameJoinEvent($p, $this, $this->getModeId(), $this->getId());
+                $event = new PlayerJoinEvent($p, $this, $this->getModeId());
                 $event->call();
 
                 if ($event->isCancelled()) {
@@ -459,15 +475,6 @@ abstract class Arena
 
             if (!$isPrivate && count($players) >= $this->getMaxSize()) {
                 $this->partyGame = true;
-
-                if ($player->hasPermission(Permissions::RANK_LEGEND)) {
-                    $this->privateGame = true;
-                    $player->sendMessage(TextFormat::GREEN . "Automatically created a private game.");
-                }
-            }
-
-            if ($party->hasPlayerRandomization()) {
-                shuffle($players);
             }
 
             $playerCount = count($players);
@@ -506,57 +513,59 @@ abstract class Arena
                 }
             }
 
-            if ($isPrivate) {
-                $this->registerGameSettings($party);
-            }
-
             foreach ($players as $p) {
                 $this->addPlayer($p, true);
             }
-        } else {
-            if ($this instanceof TeamArena) {
-                if ($this->getPlugin()->balanceQueuing()) {
-                    $players = $this->getTeamSize();
-                    $bestTeam = null;
 
-                    foreach ($this->getTeams() as $team) {
-                        if (($teamPlayers = count($team->getPlayers())) < $players) {
-                            $players = $teamPlayers;
-                            $bestTeam = $team;
-                        }
-                    }
+            return true;
+        }
 
-                    /** @var Team $bestTeam */
-                    $bestTeam->addPlayer($player);
-                } else {
-                    $team = null;
-                    foreach ($this->getTeams() as $teamItem) {
-                        if (count($teamItem->getPlayers()) < $this->getTeamSize()) {
-                            $team = $teamItem;
-                            break;
-                        }
-                    }
+        if ($this instanceof TeamArena) {
+            if ($this->getPlugin()->balanceQueuing()) {
+                $size = $this->getTeamSize();
+                $bestTeam = null;
 
-                    if ($team == null && $isPrivate) {
-                        foreach ($this->getTeams() as $teamItem) {
-                            if ($team == null || (count($teamItem->getPlayers()) < count($team->getPlayers()))) {
-                                $team = $teamItem;
-                            }
-                        }
-                    }
-
-                    if ($team) {
-                        $team->addPlayer($player);
-                    } else {
-                        $player->sendMessage(TextFormat::RED . "Something went wrong when adding you to that game. Please notify a developer of this issue.");
-                        $this->getPlugin()->getEssentials()->getPlayerManager()->transferPlayer($player);
+                foreach ($this->getTeams() as $team) {
+                    if (($teamPlayers = count($team->getPlayers())) < $size) {
+                        $size = $teamPlayers;
+                        $bestTeam = $team;
                     }
                 }
+
+                if ($bestTeam === null) {
+                    $player->sendMessage(TextFormat::RED . "Something went wrong when adding you to that game. Please notify a developer of this issue.");
+                    return false;
+                }
+
+                $bestTeam->addPlayer($player);
             } else {
-                $this->players[] = $player;
+                $team = null;
+                foreach ($this->getTeams() as $teamItem) {
+                    if (count($teamItem->getPlayers()) < $this->getTeamSize()) {
+                        $team = $teamItem;
+                        break;
+                    }
+                }
+
+                if ($team === null && $isPrivate) {
+                    foreach ($this->getTeams() as $teamItem) {
+                        if ($team === null || (count($teamItem->getPlayers()) < count($team->getPlayers()))) {
+                            $team = $teamItem;
+                        }
+                    }
+                }
+
+                if ($team !== null) {
+                    $team->addPlayer($player);
+                } else {
+                    $player->sendMessage(TextFormat::RED . "Something went wrong when adding you to that game. Please notify a developer of this issue.");
+                    return false;
+                }
             }
-            $this->queuePlayer($player);
+        } else {
+            $this->players[] = $player;
         }
+        $this->queuePlayer($player);
 
         return true;
     }
@@ -571,54 +580,11 @@ abstract class Arena
      */
     final public function removePlayer(Player $player, int $reason, bool $force = false, bool $toHub = true): bool
     {
-        $event = new MinigameQuitEvent($player, $this, $this->getModeId(), $this->getId(), $reason);
+        $event = new PlayerQuitEvent($player, $this, $reason);
         $event->call();
 
         if (!$event->isCancelled()) {
-            $ess = $this->getPlugin()->getEssentials();
-            $playerManager = $ess->getPlayerManager();
-            $partyManager = $playerManager->getSocialManager()->getPartyManager();
-            $serverManager = $ess->getServerManager();
-
-            if (!$force && ($reason === MinigameQuitEvent::END || $reason === MinigameQuitEvent::LEAVE) && ($party = $partyManager->getParty($player)) !== null) {
-                if ($party->getLeaderName() === $player->getName()) {
-                    $ingamePlayers = $this->isRunning() ? array_filter($partyManager->getPlayers($party), fn(Player $member) => !$this->isSpectator($member) && $member !== $player) : [];
-
-                    if (count($ingamePlayers) !== 0) {
-                        $form = FormManager::createModalForm($player);
-
-                        if ($form !== null) {
-                            $form->setTitle('Quit the match');
-
-                            if (count($ingamePlayers) === 1) {
-                                $form->setContent($playerManager->getPlayerName($ingamePlayers[array_key_first($ingamePlayers)]) . ' is still in the game. Are you sure you wish to take them to the lobby?');
-                            } else {
-                                $form->setContent(Utils::getPrettyList($playerManager->getPlayerNames($ingamePlayers)) . ' are still in the game. Are you sure you wish to take them to the lobby?');
-                            }
-
-                            $form->setButton1(new Button(TextFormat::BOLD . TextFormat::GREEN . 'Yes', function (Player $player) use ($reason) {
-                                $this->removePlayer($player, $reason, true);
-                            }));
-                            $form->setButton2(new Button(TextFormat::BOLD . TextFormat::RED . 'No'));
-
-                            $form->sendForm();
-                        }
-                        return false;
-                    }
-                } else {
-                    $player->sendMessage(TextFormat::RED . 'You can\'t go back to the lobby while you\'re in a party. Wait for your party host to decide when to return!');
-                    return false;
-                }
-            }
-
             if ($this->isRunning() || $this->isFinishing()) {
-                if (in_array($player, $this->getPlayers(false), true) && !$this->isPartyGame() && $reason !== MinigameQuitEvent::DISCONNECT_KICK) {
-                    $this->addParticipation($player, [
-                        self::DATA_XP => [],
-                        self::DATA_CREDITS => [],
-                        self::DATA_COINS => []
-                    ]);
-                }
                 $this->despawnEntities($player);
             }
             $this->resetPlayer($player);
@@ -627,6 +593,7 @@ abstract class Arena
                 $player->getEffects()->clear();
             }
 
+            $team = null;
             if ($this instanceof TeamArena) {
                 if (($team = $this->getTeamNull($player)) !== null) {
                     $team->removePlayer($player);
@@ -637,22 +604,20 @@ abstract class Arena
 
             $this->players = array_diff($this->players, [$player]);
 
-            $this->getScoreboard()->removePlayer($player);
+            if ($this->hasScoreboard()) {
+                $this->getScoreboard()->removePlayer($player);
+            }
 
             $this->queuedPlayers = array_diff($this->queuedPlayers, [$player]);
 
-            /** @var NGPlayer $player */
-            $player->setEnergized(false);
+            GameSession::getSession($player)->setEnergized(false);
 
-            if ($ess->getServerManager()->enableCombatLogger()) {
-                $ess->getCombatLogger()->wipeLog($player, true);
-            }
             $this->getStatsData()->resetTempStats($player);
 
             if ($this->isSpectator($player)) {
                 $this->spectators = array_diff($this->getSpectators(), [$player]);
             } elseif ($this->isRunning()) {
-                if (isset($team)) {
+                if ($team !== null) {
                     $this->broadcastMessage($team->getPlayerName($player) . ' §7disconnected', true);
                 } else {
                     $this->broadcastMessage($player->getDisplayName() . ' §7disconnected', true);
@@ -662,39 +627,30 @@ abstract class Arena
             } elseif ($this->isWaiting() || $this->isStarting()) {
                 unset($this->mapVotes[$player->getId()]);
 
-                if (isset($team)) {
+                if ($team !== null) {
                     $this->broadcastMessage($team->getPlayerName($player) . ' §ehas quit!', true);
                 } else {
                     $this->broadcastMessage($player->getDisplayName() . ' §ehas quit!', true);
                 }
-                $this->getScoreboard()->setLine($this->getPlayers(false), 7, CustomIcon::PLAYERS_TINY . TextFormat::GREEN . count($this->getPlayers()) . '/' . $this->getMaxSize());
+                if ($this->hasScoreboard()) {
+                    $this->getScoreboard()->setLine($this->getPlayers(false), 7, Icon::get('players') . TextFormat::GREEN . count($this->getPlayers()) . '/' . $this->getMaxSize());
+                }
 
                 $this->xuids = array_diff($this->xuids, [$player->getXuid()]);
             }
 
-            if (!$this->getPlugin()->isStandAloneGame() && $reason !== MinigameQuitEvent::DISCONNECT) {
-                $player->setNameTag($playerManager->getNameTag($player, TextFormat::YELLOW));
+            if (!$this->getPlugin()->isStandAloneGame() && $reason !== PlayerQuitEvent::DISCONNECT) {
+                $player->setNameTag($player->getDisplayName());
             }
 
-            if ($reason === MinigameQuitEvent::LEAVE || $reason === MinigameQuitEvent::END || $reason === MinigameQuitEvent::PARTY) {
-                if (($party = $partyManager->getParty($player)) === null) {
-                    if ($toHub && $this->getPlugin()->isStandAloneGame()) {
-                        $playerManager->transferPlayer($player);
-                    }
-                } elseif ($party->getLeaderName() === $player->getName()) {
-                    foreach ($party->getMembers() as $memberName) {
-                        if (($member = $player->getServer()->getPlayerExact($memberName)) !== null) {
-                            $reason = $this->isSpectator($member) ? MinigameQuitEvent::END : MinigameQuitEvent::PARTY;
-                            $this->removePlayer($member, $reason, true);
-                        }
-                    }
+            if ($reason === PlayerQuitEvent::LEAVE || $reason === PlayerQuitEvent::END || $reason === PlayerQuitEvent::PARTY) {
+                if ($toHub && $this->getPlugin()->isStandAloneGame()) {
+                    $defaultWorld = $this->getPlugin()->getServer()->getWorldManager()->getDefaultWorld();
 
-                    if ($toHub && $this->getPlugin()->isStandAloneGame()) {
-                        $playerManager->transferPlayer($player);
+                    if ($defaultWorld !== null) {
+                        $player->teleport($defaultWorld->getSpawnLocation());
                     }
                 }
-
-                $player->teleport($serverManager->getSpawn());
             }
 
             if ($toHub && !$this->getPlugin()->isStandAloneGame()) {
@@ -727,7 +683,7 @@ abstract class Arena
     }
 
     /**
-     * Returns whether a party is solely playing this game
+     * Returns whether a group is solely playing this game.
      */
     public function isPartyGame(): bool
     {
@@ -735,7 +691,7 @@ abstract class Arena
     }
 
     /**
-     * Get if requested to start game immediately
+     * Get if requested to start game immediately.
      */
     public function shouldStartImmediately(): bool
     {
@@ -743,7 +699,7 @@ abstract class Arena
     }
 
     /**
-     * Request to start game immediately
+     * Request to start game immediately.
      */
     public function startImmediately(): void
     {
@@ -751,7 +707,7 @@ abstract class Arena
     }
 
     /**
-     * True whenever a game is played by only one player or team from the start
+     * True whenever a game is played by only one player or team from the start.
      */
     public function isOpponentlessGame(): bool
     {
@@ -759,204 +715,14 @@ abstract class Arena
     }
 
     /**
-     * @param array<self::DATA_*, array<array{string, int}>> $data
+     * @deprecated Rewards are now produced via {@see Arena::getRewards()} and consumed externally through {@see PlayerQuitEvent}.
+     *
+     * @param array<array-key, mixed> $data
      */
     public function addParticipation(Player $player, array $data, bool $guildXP = false): void
     {
-        $ess = $this->getPlugin()->getEssentials();
-        $playerData = $ess->getPlayerData();
-        $playerManager = $ess->getPlayerManager();
-
-        $crateKey = false;
-
-        $totalXP = 0;
-        $xpMultiplier = 1;
-        $xpMultiplierReasons = [];
-
-        $player->sendMessage("§e§lREWARD SUMMARY:");
-
-        if (($kills = $this->getStatsData()->getValue($player, StatsData::KILLS)) !== 0) {
-            $totalXP = ceil($kills / 2);
-        }
-
-        if ($won = $this->isWinner($player)) {
-            $totalXP += 9;
-            $crateKey = $playerManager->getCosmeticHandler()->shouldGiveCrateKey($player);
-
-            if (($streaksKey = $this->getStreaksKey()) != null) {
-                Streaks::Increment(
-                    xuid: $player->getXuid(),
-                    gameKey: $streaksKey,
-                    onSelected: function (Streak $streak) use ($player) {
-                        if (!$player->isConnected()) {
-                            return;
-                        }
-                        if ($streak->isBestChanged()) {
-                            $player->sendMessage("§l§6NEW BEST WIN STREAK: §r§b" . $streak->getCurrent());
-                        } else {
-                            $player->sendMessage("§6Your win streak is now §b" . $streak->getCurrent() . "§6 (best streak: §b" . $streak->getBest() . "§6)");
-                        }
-                    },
-                    onError: function () use ($player) {
-                        if (!$player->isConnected()) {
-                            return;
-                        }
-                        $player->sendMessage("§cAn error occurred while updating your streak.");
-                    }
-                );
-            }
-        } else {
-            if (($streaksKey = $this->getStreaksKey()) != null) {
-                Streaks::Reset(
-                    xuid: $player->getXuid(),
-                    gameKey: $streaksKey,
-                    onUpdated: function () use ($player) {
-                        if (!$player->isConnected()) {
-                            return;
-                        }
-                        $player->sendMessage("§cYou lost your streak!");
-                    },
-                    onError: function () use ($player) {
-                        if (!$player->isConnected()) {
-                            return;
-                        }
-                        $player->sendMessage("§cAn error occurred while updating your streak.");
-                    });
-            }
-        }
-
-        foreach ($data[self::DATA_XP] as $xpData) {
-            [, $amount] = $xpData;
-
-            if ($amount > 0) {
-                $totalXP += $amount;
-            }
-        }
-
-        if (\NetherGames\NGEssentials\utils\Utils::isWeekend()) {
-            $xpMultiplierReasons[] = "the double XP weekend";
-            $xpMultiplier *= 2;
-        }
-
-        if ($player->hasPermission(Permissions::TIER_DIAMOND)) {
-            $xpMultiplierReasons[] = "your Diamond tier";
-            $xpMultiplier *= 2;
-        } else if ($player->hasPermission(Permissions::TIER_SAPPHIRE)) {
-            $xpMultiplierReasons[] = "your Sapphire tier";
-            $xpMultiplier *= 1.75;
-        } else if ($player->hasPermission(Permissions::TIER_AMETHYST)) {
-            $xpMultiplierReasons[] = "your Amethyst tier";
-            $xpMultiplier *= 1.5;
-        } else if ($player->hasPermission(Permissions::TIER_OPAL)) {
-            $xpMultiplierReasons[] = "your Opal tier";
-            $xpMultiplier *= 1.25;
-        } else if ($player->hasPermission(Permissions::TIER_GOLD)) {
-            $xpMultiplierReasons[] = "your Gold tier";
-            $xpMultiplier *= 1.1;
-        } else if ($player->hasPermission(Permissions::TIER_SILVER)) {
-            $xpMultiplierReasons[] = "your Silver tier";
-            $xpMultiplier *= 1.05;
-        }
-
-        switch ($this->getXpBoost()) {
-            case 4:
-                $xpMultiplierReasons[] = "a Titan player in-game";
-                $xpMultiplier *= 3;
-                break;
-            case 3:
-                $xpMultiplierReasons[] = "a Legend player in-game";
-                $xpMultiplier *= 2.5;
-                break;
-            case 2:
-                $xpMultiplierReasons[] = "an Emerald player in-game";
-                $xpMultiplier *= 2;
-                break;
-            case 1:
-                $xpMultiplierReasons[] = "an Ultra player in-game";
-                $xpMultiplier *= 1.5;
-                break;
-        }
-
-        if ((time() - $playerData->getInt($player, PlayerData::VOTE_TIME)) < (60 * 60 * 24)) {
-            $xpMultiplierReasons[] = "your voting status";
-            $xpMultiplier *= 1.25;
-        }
-
-        if ($this->getStatsData()->getValue($player, StatsData::PERFECT_SHOTS) > 0) {
-            $totalXP += $this->getStatsData()->getValue($player, StatsData::PERFECT_SHOTS, true) * 3;
-        }
-
-        if ($this->isFinishing() || $this->isSpectator($player)) {
-            $totalXP++;
-        }
-
-        if ($totalXP > 0) {
-            $totalXP *= $xpMultiplier;
-
-            $playerData->addInt($player, PlayerData::XP, (int)$totalXP);
-            $player->sendMessage(CustomIcon::EXPERIENCE . '+' . (int)$totalXP . ' XP');
-        }
-
-        $creditsMultiplier = 1;
-        $creditsMultiplierReasons = [];
-        if (count($data[self::DATA_CREDITS]) !== 0) {
-            $totalCredits = 0;
-
-            foreach ($data[self::DATA_CREDITS] as $creditsData) {
-                [, $amount] = $creditsData;
-
-                if ($amount > 0) {
-                    $totalCredits += $amount;
-                }
-            }
-
-            if ((time() - $playerData->getInt($player, PlayerData::VOTE_TIME)) < (60 * 60)) {
-                $creditsMultiplierReasons[] = "your voting status";
-                $creditsMultiplier *= 2;
-            }
-
-            $totalCredits *= $creditsMultiplier;
-            $playerData->addInt($player, PlayerData::STATUS_CREDITS, (int)$totalCredits);
-            $player->sendMessage(CustomIcon::MYSTIC_CHEST . '+' . (int)$totalCredits . ' Credits');
-        }
-
-        if (count($data[self::DATA_COINS]) !== 0) {
-            $totalCoins = 0;
-
-            foreach ($data[self::DATA_COINS] as $coinsData) {
-                [, $amount] = $coinsData;
-
-                if ($amount > 0) {
-                    $totalCoins += $amount;
-                }
-            }
-
-            $playerData->addInt($player, PlayerData::COINS, (int)$totalCoins);
-            $player->sendMessage(CustomIcon::COIN . '+' . (int)$totalCoins . ' Coins');
-        }
-
-        if ($won && $guildXP && ($guild = $playerManager->getSocialManager()->getGuildsManager()->getGuild($playerData->getInt($player, PlayerData::GUILD))) !== null) {
-            if ($guild->isDisabled()) {
-                $player->sendMessage(CustomIcon::SHIELD . ' ' . TextFormat::RED . "Guild Disabled");
-            } else {
-                $winXp = $this->getGXP();
-
-                $player->sendMessage(CustomIcon::SHIELD . '+' . $winXp . " Guild XP");
-                $guild->addXp($winXp);
-            }
-        }
-
-        if ($crateKey) {
-            $player->sendMessage(CustomIcon::KEY . '+1 Crate Key');
-            $playerData->addInt($player, PlayerData::KEYS, 1);
-        }
-
-        if (count($xpMultiplierReasons) > 0) {
-            $player->sendMessage(TextFormat::GREEN . "Your XP total includes " . (strval($xpMultiplier)[0] == "8" ? "an " : "a ") . TextFormat::BOLD . TextFormat::YELLOW . number_format($xpMultiplier, 2) . TextFormat::RESET . TextFormat::GREEN . " boost thanks to " . Utils::getPrettyList($xpMultiplierReasons));
-        }
-        if (count($creditsMultiplierReasons) > 0) {
-            $player->sendMessage(TextFormat::GREEN . "Your credits total includes a " . TextFormat::BOLD . TextFormat::YELLOW . number_format($creditsMultiplier, 2) . TextFormat::RESET . TextFormat::GREEN . " boost thanks to " . Utils::getPrettyList($creditsMultiplierReasons));
-        }
+        // Reward processing has moved out of libminigames; the original data-driven reward engine
+        // is now run by an external module listening to PlayerQuitEvent / getRewards().
     }
 
     final public function getStatsData(): StatsData
@@ -973,9 +739,39 @@ abstract class Arena
         return $this->getStatsData()->getValue($player, StatsData::WINS) > 0;
     }
 
-    public function getXpBoost(): int
+    /**
+     * Builds the kill message for a player killed in this arena.
+     *
+     * <p>Fires a {@see PlayerKillEvent} so consumers (e.g. cosmetic/kill-message modules) can
+     * replace the message, then returns {@see PlayerKillEvent::getKillMessage()}. Callers are
+     * responsible for substituting the <code>{PLAYER}</code>/<code>{DAMAGER}</code> placeholders;
+     * <code>$killer</code> is null for environment deaths (void/lava/fall) that have no damager.
+     *
+     * @param Player|null $killer
+     * @param Player $victim
+     * @param int $cause An {@link EntityDamageEvent} cause id.
+     */
+    public function getKillMessage(?Player $killer, Player $victim, int $cause): string
     {
-        return $this->xpBoost ?? 0;
+        $event = new PlayerKillEvent($victim, $killer, $cause, '{PLAYER} §r§7died.');
+        $event->call();
+
+        return $event->getKillMessage();
+    }
+
+    /**
+     * Computes the rewards a player earned for this match.
+     *
+     * <p>Specific minigames should override this method to report their distinct currencies.
+     * The values are raw and unmodified; external modules (e.g. an economy system) are responsible
+     * for mapping the {@see RewardEntry::$type} and applying their own multipliers/persistence.
+     *
+     * @param Player $player
+     * @return RewardEntry[]
+     */
+    public function getRewards(Player $player): array
+    {
+        return [];
     }
 
     public function despawnEntities(Player $player): void
@@ -985,12 +781,6 @@ abstract class Arena
 
     public function resetPlayer(Player $player): void
     {
-        $plugin = $this->getPlugin();
-        $ess = $plugin->getEssentials();
-        if ($ess->getServerManager()->enableCombatLogger()) {
-            $ess->getCombatLogger()->wipeLog($player, true);
-        }
-
         $player->getOffHandInventory()->clearAll();
         $player->getCursorInventory()->clearAll();
         $player->getCraftingGrid()->clearAll();
@@ -1020,7 +810,7 @@ abstract class Arena
      * @param string $message
      * @param bool $force If true, will send the message as a chat message. If false, will send the message as a conditional (chat/popup) message.
      * @param Player[] $excludePlayers Players to exclude from the broadcast.
-     * @param int $type The medium in which you want to send a message (e.g. TYPE_TOAST, TYPE_TITLE, ect). Default is TYPE_ACTIONBAR.
+     * @param int $type The medium in which you want to send a message (e.g. TYPE_TOAST, TYPE_TITLE, ...). Default is TYPE_ACTIONBAR.
      *
      * @return void
      * @see TextType for the different types of messages you can send.
@@ -1031,9 +821,33 @@ abstract class Arena
             if ($force) {
                 $player->sendMessage($message);
             } else {
-                /** @var NGPlayer $player */
-                $player->sendConditionalMessage($message, $type);
+                $this->sendConditionalMessage($player, $message, $type);
             }
+        }
+    }
+
+    private function sendConditionalMessage(Player $player, string $message, int $type = TextType::TYPE_ACTIONBAR): void
+    {
+        if (GameSession::getSession($player)->isPopupsEnabled() && $type !== TextType::TYPE_CHAT) {
+            $centeredMessage = TextUtils::center($message);
+            if ($type === TextType::TYPE_ACTIONBAR) {
+                $player->sendActionBarMessage($centeredMessage);
+            } elseif ($type === TextType::TYPE_POPUP) {
+                $player->sendPopup($centeredMessage);
+            } elseif ($type === TextType::TYPE_TIP) {
+                $player->sendTip($centeredMessage);
+            } elseif ($type === TextType::TYPE_JUKEBOX_POPUP) {
+                $player->sendJukeboxPopup($centeredMessage);
+            } elseif ($type === TextType::TYPE_TITLE) {
+                $player->sendTitle($centeredMessage);
+            } elseif ($type === TextType::TYPE_TOAST) {
+                $player->sendToastNotification($centeredMessage, $message);
+            } else {
+                $player->sendMessage($message);
+                $player->sendMessage(TextFormat::RED . "Error: Invalid message type: $type. Please report this to a staff member.");
+            }
+        } else {
+            $player->sendMessage($message);
         }
     }
 
@@ -1065,38 +879,32 @@ abstract class Arena
     }
 
     /**
-     * In here should be all the prep work that gets done before the player is added to the waiting lobby
+     * Performs all the prep work that needs to be done before the player is added to the waiting lobby.
      *
      * @param Player $player
      */
     public function queuePlayer(Player $player): void
     {
-        $ess = $this->getPlugin()->getEssentials();
-        $playerManager = $ess->getPlayerManager();
-        $enforcementHandler = $playerManager->getEnforcementHandler();
-
         if (!$this->isSpectator($player)) {
             $plugin = $this->getPlugin();
+            $session = GameSession::getSession($player);
 
             if ($this->isPrivateGame()) {
                 $player->sendMessage(TextFormat::GOLD . 'You are currently in a private party match. You will only be able to play with people in your party. Players outside of your party will not be able to join this match.');
             }
 
-            /** @var NGPlayer $player */
             if ($this->isPartyGame()) {
                 $player->sendMessage(TextFormat::RED . "This game will NOT impact your stats.");
             } elseif (mt_rand(1, 10) === 10) {
                 if ($this->isTouchOnly()) {
                     $player->sendMessage(TextFormat::GOLD . 'You are currently in a touch controls only match - queuing might take slightly longer. You can play with all players (not only touch control users) by disabling "Touch only queuing" in Profile Settings -> Preferences while in the lobby.');
-                } elseif ($player->getInputMode() === InputMode::TOUCHSCREEN) {
+                } elseif ($session->getInputMode() === InputMode::TOUCHSCREEN) {
                     $player->sendMessage(TextFormat::GOLD . 'You are currently playing a match that includes players using any device. You can play matches with touchscreen players only by enabling "Touch only queuing" in Profile Settings -> Preferences while in the lobby.');
                 }
             }
 
             $player->setGamemode(GameMode::ADVENTURE);
-            $player->setEnergized();
-
-            $playerManager->setStatsBar($player);
+            $session->setEnergized();
 
             $playerCount = count($this->getPlayers(false));
             $maxSize = $this->getMaxSize();
@@ -1111,7 +919,7 @@ abstract class Arena
                     $player->sendMessage('§eYou joined the ' . $team->getDisplayName() . ' §eteam');
                 }
             } else {
-                $this->xuids[$playerManager->getPlayerName($player)] = $player->getXuid();
+                $this->xuids[$player->getName()] = $player->getXuid();
 
                 $inventory = $player->getInventory();
                 $inventory->setHeldItemIndex(1);
@@ -1127,58 +935,27 @@ abstract class Arena
             }
         }
 
-        if ($ess->getPlayerData()->getGameSettings()->getBool($player, PlayerGameSettings::ANNOUNCE_PLAYERS)) {
-            if ($player->hasPermission(Permissions::RANK_VOTER)) {
-                $oppTeamsArray = [];
-
-                if ($this instanceof TeamArena) {
-                    foreach ($this->getTeams() as $team) {
-                        foreach ($team->getPlayers() as $oppPlayer) {
-                            $oppTeamsArray[] = match ($oppPlayer === $player) {
-                                true => $team->getColor() . TextFormat::BOLD . "You",
-                                default => $team->getPlayerName($oppPlayer)
-                            };
-                        }
-                    }
-                } else {
-                    foreach ($this->getPlayers(false) as $oppPlayer) {
-                        if ($oppPlayer !== $player) {
-                            $oppTeamsArray[] = $playerManager->getNameTag($oppPlayer);
-                        }
-                    }
-                }
-
-                $player->sendMessage(TextFormat::YELLOW . "In your game: " . implode(TextFormat::RESET . TextFormat::YELLOW . ", ", $oppTeamsArray));
-            } else {
-                $player->sendMessage("In your game: " . TextFormat::OBFUSCATED . TextFormat::RED . "OBFUSCATED");
-                if (rand(1, 3) == 1) $player->sendMessage(TextFormat::AQUA . "Unlock this feature by voting at https://ngmc.co/v.");
-            }
-        }
-
         if ($this->isCreator($player)) {
             $player->getInventory()->setItem(Items::PRIVATE_GAME_SETTINGS, Items::getGameSettingsBlazeRod());
         }
 
         $player->teleport($this->getWaitingLobbySpawn());
-        foreach ($enforcementHandler->isTracking($player->getName()) as $staffMember) {
-            $staffMember->teleport($player->getLocation());
-        }
 
         $this->queuedPlayers[] = $player;
     }
 
     public function isTouchOnly(): bool
     {
-        $playerData = $this->getPlugin()->getEssentials()->getPlayerData();
         $mobileOnlyPlayers = 0;
 
         foreach ($this->getPlayers(false) as $player) {
-            /** @var NGPlayer $player */
-            if ($player->getInputMode() !== InputMode::TOUCHSCREEN) {
+            $session = GameSession::getSession($player);
+
+            if ($session->getInputMode() !== InputMode::TOUCHSCREEN) {
                 return false;
             }
 
-            if ($playerData->getGameSettings()->getBool($player, PlayerGameSettings::TOUCH_ONLY)) {
+            if ($session->isTouchOnlyPreference()) {
                 $mobileOnlyPlayers++;
             }
         }
@@ -1236,7 +1013,14 @@ abstract class Arena
 
     public function addMapVote(Player $player, int $mapId): void
     {
-        $this->mapVotes[$player->getId()] = $mapId;
+        $event = new PlayerMapVoteEvent($player, $this, $mapId);
+        $event->call();
+
+        if ($event->isCancelled()) {
+            return;
+        }
+
+        $this->mapVotes[$player->getId()] = $event->getMapId();
     }
 
     public function checkMapVotes(): void
@@ -1254,14 +1038,6 @@ abstract class Arena
 
                 $this->mapName = $maps[$mapId];
                 $this->broadcastMessage(TextFormat::GOLD . $this->getMapDisplayName(true) . TextFormat::GREEN . ' has won with ' . TextFormat::GOLD . $votes[$mapId] . TextFormat::GREEN . ' vote' . ((int)$votes[$mapId] > 1 ? 's' : '') . '!', true);
-
-                foreach ($votes as $mapId => $voteCount) {
-                    MySQLCredentials::executeChange("map_votes.add_votes", [
-                        'game_mode' => $this->getPlugin()->getEssentials()->getServerManager()->getServerType(),
-                        'map_name' => $maps[$mapId],
-                        'votes' => $voteCount
-                    ]);
-                }
             }
         } else {
             $this->mapName = $maps[0];
@@ -1284,7 +1060,7 @@ abstract class Arena
     {
         $worldName = $this->getMatchWorldName();
 
-        NGThreadPool::getInstance()->submitTask(new FileCopyAsyncTask(Path::join($this->getPlugin()->getDataFolder(), 'arenas', $this->getMapName()), Path::join($this->getPlugin()->getServer()->getDataPath(), 'worlds', $worldName), function () use ($worldName) {
+        Server::getInstance()->getAsyncPool()->submitTask(new FileCopyAsyncTask(Path::join($this->getPlugin()->getDataFolder(), 'arenas', $this->getMapName()), Path::join($this->getPlugin()->getServer()->getDataPath(), 'worlds', $worldName), function () use ($worldName) {
             $worldManager = $this->getPlugin()->getServer()->getWorldManager();
             $worldManager->loadWorld($worldName);
             $world = $worldManager->getWorldByName($worldName);
@@ -1293,27 +1069,9 @@ abstract class Arena
                 $world->setTime($this->getPlugin()->getArenaConfig()->getTime($this));
                 $world->stopTime();
 
-                if (!NGEssentials::isInDevelopmentMode() && $this->getPlugin()->getReplaySystemStatus() && ($recordManager = RecordManager::getInstance()) !== null) {
-                    $recordManager->startRecording($world, [
-                        RecordManager::DATA_MAP_NAME => $this->getMapName(),
-                        RecordManager::DATA_PLAYERS => $this->getPlugin()->getEssentials()->getPlayerManager()->getPlayerNames($this->getAlivePlayers(), true),
-                        RecordManager::DATA_PRIVATE => $this->isPrivateGame(),
-                        RecordManager::DATA_TOUCH_ONLY => $this->isTouchOnly(),
-                    ], function (?Recording $recording): void {
-                        if ($recording !== null) {
-                            $this->replayId = $recording->getReplayId();
-                        }
-                    });
-                }
-
                 $this->setupMapFeatures($world);
             }
         }));
-    }
-
-    public function getReplayId(): ?int
-    {
-        return $this->replayId;
     }
 
     /**
@@ -1330,17 +1088,6 @@ abstract class Arena
     }
 
     /**
-     * @return Player[]
-     */
-    public function getAlivePlayers(): array
-    {
-        return array_diff($this->getPlayers(false), $this->getSpectators());
-    }
-
-    /**
-     * Setup map features after the map has successfully being copied and loaded.
-     * This function is followed right after the {@see Arena::setupMap()} when it has successfully being executed.
-     *
      * @param World $world
      */
     public function setupMapFeatures(World $world): void
@@ -1355,7 +1102,10 @@ abstract class Arena
 
     public function setStatus(int $status): void
     {
+        $oldStatus = $this->status;
         $this->status = $status;
+
+        (new ArenaStatusChangeEvent($this, $oldStatus, $status))->call();
     }
 
     public function isFull(): bool
@@ -1410,19 +1160,12 @@ abstract class Arena
         $alivePlayers = $this->getAlivePlayers();
 
         foreach ($alivePlayers as $player) {
-            /** @var NGPlayer $player */
             $player->removeTitles();
             $player->resetTitles();
             $player->getInventory()->clearAll();
-            $player->setEnergized(false);
+            GameSession::getSession($player)->setEnergized(false);
             $player->extinguish();
             $player->getXpManager()->setXpAndProgress(0, 0.0);
-
-            (new MinigameStartEvent($player, $this, $this->getModeId(), $this->getId()))->call();
-        }
-
-        if ($this->isPrivateGame()) {
-            $this->getGameSettings()->sendSettingsAnnouncement($this);
         }
 
         $plugin = $this->getPlugin();
@@ -1436,12 +1179,19 @@ abstract class Arena
             }
 
             $this->world = $world;
+        }
 
-            $this->startGame();
+        // Fired with the match world already resolved (see {@see Arena::getWorld()}).
+        (new ArenaStartEvent($this))->call();
 
+        if ($this->isPrivateGame()) {
+            $this->getGameSettings()->sendSettingsAnnouncement($this);
+        }
+
+        $this->startGame();
+
+        if ($plugin->hasWaitingLobby()) {
             $plugin->removeWaitingLobby($this);
-        } else {
-            $this->startGame();
         }
 
         if ($this->isPrivateGame()) {
@@ -1455,18 +1205,12 @@ abstract class Arena
 
         $halloween = $plugin->getArenaConfig()->getTag($this->getMapName()) === ArenaConfig::TAG_HALLOWEEN;
         $effect = $halloween ? new EffectInstance(VanillaEffects::NIGHT_VISION(), Limits::INT32_MAX, 1, false) : null;
-        $enforcement = $plugin->getEssentials()->getPlayerManager()->getEnforcementHandler();
         foreach ($alivePlayers as $player) {
-            foreach ($enforcement->isTracking($player->getName()) as $staffMember) {
-                $staffMember->teleport($player->getLocation());
-            }
-
             if ($effect !== null) {
                 $player->getEffects()->add($effect);
             }
         }
 
-        $this->calculateXpBoost();
         $this->setStatus(self::STATUS_RUNNING);
         $this->startTime = time();
     }
@@ -1480,25 +1224,24 @@ abstract class Arena
 
         $players = $this->getPlayers();
 
+        $playerStats = [];
         foreach ($players as $player) {
-            // If the player created the game, attempt to update their settings in the database
-            if ($this->isCreator($player)) {
-                $serverManager = NGEssentials::getInstance()->getServerManager();
-                $this->getGameSettings()->saveToPlayer(
-                    player: $player,
-                    serverType: $serverManager->getServerType(),
-                    gameType: $serverManager->getGameType()
-                );
-            }
-            $this->removePlayer($player, MinigameQuitEvent::FINISH);
+            $playerStats[] = new PlayerMatchStats(
+                player: $player,
+                winner: $this->isWinner($player),
+                stats: $this->getStatsData()->snapshot($player),
+                extra: []
+            );
+        }
+
+        (new ArenaEndEvent($this, new MatchResult($playerStats)))->call();
+
+        foreach ($players as $player) {
+            $this->removePlayer($player, PlayerQuitEvent::FINISH);
         }
         $this->requeuePlayers($players);
 
         $this->finishGame();
-
-        if (!$this->isPrivateGame() && !ServerManager::$restarting) {
-            $this->getStatsData()->save($this);
-        }
 
         $this->getPlugin()->removeArena($this);
     }
@@ -1512,63 +1255,67 @@ abstract class Arena
     }
 
     /**
-     * Returns true if set up as a private game + the player is the party creator
+     * Returns true if set up as a private game + the player is the game's creator.
      *
      * @param Player $player
-     * @return bool
      */
     public function isCreator(Player $player): bool
     {
-        return $this->getParty()?->getLeader() === $player;
+        return $this->creator === $player;
     }
 
     /**
-     * Returns the party that created this arena when it's a private game.
+     * Marks the player who created this arena (for private games).
+     *
+     * @deprecated The concept of a private game creator is being moved into the engine via group UUIDs.
      */
-    public function getParty(): ?Party
+    final public function setCreator(?Player $creator): void
     {
-        return $this->party;
+        $this->creator = $creator;
+    }
+
+    /**
+     * Converts this arena into a private game owned by the given creator, or back into a public one.
+     *
+     * <p>Group owners (e.g. a party with private-games enabled) use this to seal an arena for their
+     * group only. Passing <code>null</code> clears both the private flag and the creator.
+     *
+     * @param bool $private
+     * @param Player|null $creator
+     */
+    public function setPrivate(bool $private, ?Player $creator): void
+    {
+        $this->privateGame = $private;
+        if (!$private) {
+            $this->creator = null;
+
+            return;
+        }
+
+        $this->creator = $creator;
     }
 
     /**
      * @param Player[] $players
+     * @param int $size The authoritative amount of players requeueing together (e.g. a party).
      */
-    public function requeuePlayers(array $players): void
+    public function requeuePlayers(array $players, int $size = 1): void
     {
         $plugin = $this->getPlugin();
-        $ess = $plugin->getEssentials();
-        $serverManager = $ess->getServerManager();
-        $playerManager = $ess->getPlayerManager();
-        $partyManager = $playerManager->getSocialManager()->getPartyManager();
+        $mode = $plugin->getModes()[$this->getModeId()] ?? '';
 
         foreach ($players as $player) {
-            /** @var NGPlayer $player */
-            if ($partyManager->isInParty($player) && !$partyManager->isPartyCreator($player)) {
-                continue;
-            }
+            $event = new PlayerRequeueEvent($player, $this, $mode, $size);
+            $event->call();
 
-            if (in_array($plugin->getMinigameTag(), [ServerManager::MM, ServerManager::MS, ServerManager::SC], true)) {
-                if ($plugin->isStandAloneGame()) {
-                    $playerManager->transferPlayer($player);
-                }
-                continue;
-            }
-
-            $onMatchmakingFailure = static function () use ($plugin, $player): void {
-                if ($player->isConnected()) {
-                    $plugin->joinArena($player);
-                }
-            };
-
-            if ($plugin->canJoinArena($player, $this->getModeId()) || !$playerManager->transferPlayer($player, $serverManager->getServerType(), $serverManager->getGameType(), true, $onMatchmakingFailure)) {
-                $onMatchmakingFailure();
+            if (!$event->isCancelled()) {
+                $plugin->joinArena($player, $this->getModeId(), $event->getSize());
             }
         }
     }
 
     /**
      * Finishes off a game, the arena will no longer usable after this function has been executed.
-     * You will need to set the arena status back to {@link Arena::STATUS_WAITING}.
      */
     public function finishGame(): void
     {
@@ -1594,50 +1341,9 @@ abstract class Arena
     /**
      * The method that will be executed to start the game.
      *
-     * <p>Before this method is being executed, an {@see Arena::setupMapFeatures()} will be called 5 seconds
-     * before this function is getting executed. Within this seconds, the arena map will be copied into their
-     * respective arena world name inside server worlds folder.
-     *
-     * <p>You also need to set scoreboard information here, this code below will explain how to do this without
-     * having an NGEEssentials plugin:
-     *
-     * <code>
-     *  // Here is how you set the lines for a player, take note that
-     *  // first argument is an array of a player, and is in an descending order
-     *  $this->getScoreboard()->setLines([$player], [
-     *      9 => '',
-     *      8 => 'Time Left: ' . TextFormat::GREEN . '5:00',
-     *      7 => '',
-     *      6 => 'Arena: ' . TextFormat::GREEN . $this->getMapName(),
-     *      5 => 'Theme: ' . TextFormat::GREEN . $this->theme,
-     *      4 => '',
-     *      3 => 'Team color: ' . $aliveTeam->getColor() . $aliveTeam->getName(),
-     *      2 => '',
-     *      1 => CustomIcon::NETHERGAMES . TextFormat::GOLD . 'ngmc.co',]);
-     *
-     *  // The code below is how you set a specific line for a scoreboard.
-     *  // The first argument are the same as above.
-     *  $this->geScoreboard()->setLine([$player], 8, 'Time Left: ' . TextFormat::GREEN . '4:59',)
-     * </code>
+     * <p>You also need to set scoreboard information here.
      */
     abstract public function startGame(): void;
-
-    public function calculateXpBoost(): void
-    {
-        foreach ($this->getPlayers(false) as $player) {
-            $this->xpBoost = max(
-                $this->xpBoost,
-                $player->hasPermission(Permissions::RANK_TITAN) ? 4 : 0,
-                $player->hasPermission(Permissions::RANK_LEGEND) ? 3 : 0,
-                $player->hasPermission(Permissions::RANK_EMERALD) ? 2 : 0,
-                $player->hasPermission(Permissions::RANK_ULTRA) ? 1 : 0
-            );
-
-            if ($this->xpBoost === 4) {
-                return;
-            }
-        }
-    }
 
     public function isInArena(Player $player): bool
     {

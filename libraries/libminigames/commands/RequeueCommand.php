@@ -24,8 +24,6 @@ declare(strict_types=1);
 namespace libminigames\commands;
 
 use libminigames\Minigame;
-use NetherGames\NGEssentials\player\NGPlayer;
-use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
@@ -46,7 +44,7 @@ class RequeueCommand extends \pocketmine\command\Command
 
         parent::__construct('requeue');
 
-        $this->setPermission(Permissions::DEFAULT_COMMAND_PERMISSION);
+        $this->setPermission('minigame.command');
         $this->setDescription('Instantly requeue into another game');
     }
 
@@ -58,7 +56,7 @@ class RequeueCommand extends \pocketmine\command\Command
     public function execute(CommandSender $sender, string $commandLabel, array $args): bool
     {
         if (!$sender instanceof Player) {
-            $sender->sendMessage($this->plugin->getEssentials()->getPrefix() . '§cThat command can only be run in-game.');
+            $sender->sendMessage('§cThat command can only be run in-game.');
             return false;
         }
 
@@ -72,14 +70,6 @@ class RequeueCommand extends \pocketmine\command\Command
             return false;
         }
 
-        if ($sender instanceof NGPlayer) {
-            $partyManager = $this->plugin->getEssentials()->getPlayerManager()->getSocialManager()->getPartyManager();
-            $party = $partyManager->getParty($sender);
-            if ($party !== null && $party->getLeader() !== $sender) {
-                $sender->sendMessage(TextFormat::RED . "Only your party leader can requeue the party into a new game.");
-                return false;
-            }
-        }
         $mode = $this->plugin->getModes()[$arena->getModeId()];
         $this->plugin->requeuePlayer($sender, $arena, $mode);
 

@@ -29,6 +29,7 @@ use murdermystery\utils\Items;
 use murdermystery\utils\MMKnife;
 use murdermystery\utils\StatsData;
 use murdermystery\utils\Utils;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
@@ -130,9 +131,9 @@ class InfectionArenaListener extends MMArenaListener
                         $this->getArena()->addKill($damager);
 
                         if ($damager === $this->getArena()->getAlpha()) {
-                            $this->getArena()->broadcastMessage(TextFormat::YELLOW . 'The alpha' . TextFormat::GRAY . ' infected ' . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($entity), true);
+                            $this->getArena()->broadcastMessage(TextFormat::YELLOW . 'The alpha' . TextFormat::GRAY . ' infected ' . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($entity), true);
                         } else {
-                            $this->getArena()->broadcastMessage(TextFormat::GRAY . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($damager) . ' infected ' . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($entity), true);
+                            $this->getArena()->broadcastMessage(TextFormat::GRAY . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($damager) . ' infected ' . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($entity), true);
                         }
                     }
                     $event->cancel();
@@ -149,9 +150,9 @@ class InfectionArenaListener extends MMArenaListener
                 $this->getArena()->addKill($damager);
 
                 if ($damager === $this->getArena()->getAlpha()) {
-                    $this->getArena()->broadcastMessage(TextFormat::YELLOW . 'The alpha' . TextFormat::GRAY . ' infected ' . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($entity), true);
+                    $this->getArena()->broadcastMessage(TextFormat::YELLOW . 'The alpha' . TextFormat::GRAY . ' infected ' . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($entity), true);
                 } else {
-                    $this->getArena()->broadcastMessage(TextFormat::GRAY . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($damager) . ' infected ' . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($entity), true);
+                    $this->getArena()->broadcastMessage(TextFormat::GRAY . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($damager) . ' infected ' . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($entity), true);
                 }
                 $event->cancel();
             }
@@ -168,7 +169,7 @@ class InfectionArenaListener extends MMArenaListener
             $this->getArena()->addAlphaDeath();
 
             if ($this->getArena()->getAlphaDeaths() === 1) {
-                $this->getArena()->broadcastMessage(TextFormat::YELLOW . 'The alpha infected, ' . TextFormat::GRAY . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($player) . TextFormat::YELLOW . ', has been revealed!', true);
+                $this->getArena()->broadcastMessage(TextFormat::YELLOW . 'The alpha infected, ' . TextFormat::GRAY . NGEssentials::getInstance()->getPlayerManager()->getPlayerName($player) . TextFormat::YELLOW . ', has been revealed!', true);
 
                 $player->setSkin($this->getArena()->getInfectedSkin());
                 $player->sendSkin();
@@ -203,7 +204,7 @@ class InfectionArenaListener extends MMArenaListener
                 $this->getArena()->broadcastMessage(TextFormat::GREEN . 'Survivors' . TextFormat::YELLOW . ' have been revealed!', true);
 
                 foreach ($this->getArena()->getSurvivors() as $survivor) {
-                    $survivor->setNameTag($this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getNameTag($survivor, TextFormat::GREEN, true, true));
+                    $survivor->setNameTag(NGEssentials::getInstance()->getPlayerManager()->getNameTag($survivor, TextFormat::GREEN, true, true));
                 }
             }
 

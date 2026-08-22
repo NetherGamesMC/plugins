@@ -23,15 +23,16 @@ declare(strict_types=1);
 
 namespace libminigames;
 
+use libminigames\events\player\PlayerSelectTeamEvent;
 use libminigames\utils\Items;
-use NetherGames\NGEssentials\player\NGPlayer;
-use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\block\utils\DyeColor;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 use function array_diff;
 use function array_filter;
+use function array_values;
 use function count;
+use function in_array;
 use function substr;
 use function ucwords;
 
@@ -136,18 +137,14 @@ class Team
 
     public function addPlayer(Player $player, bool $teamChange = false): void
     {
-        /** @var NGPlayer $player */
         $this->players[] = $player;
 
         if ($teamChange) {
             $player->setNameTag($this->getPlayerName($player, true));
-        } else {
-            $player->sendConditionalMessage('§6Searching for an available match...');
         }
 
         if (!in_array($player->getXuid(), $this->xuids, true)) {
-            $playerManager = $this->getArena()->getPlugin()->getEssentials()->getPlayerManager();
-            $this->xuids[$playerManager->getPlayerName($player)] = $player->getXuid();
+            $this->xuids[$player->getName()] = $player->getXuid();
         }
     }
 
@@ -157,7 +154,7 @@ class Team
             return TextFormat::BOLD . $this->getColor() . ucwords(substr($this->getName(), 0, 1)) . TextFormat::RESET . ' ' . $this->getPlayerName($player);
         }
 
-        return $this->getColor() . $this->getArena()->getPlugin()->getEssentials()->getPlayerManager()->getPlayerName($player);
+        return $this->getColor() . $player->getDisplayName();
     }
 
     final public function getColor(): string
@@ -282,7 +279,11 @@ class Team
     }
 
     /**
-     * Checks if a player can join this team. Returns null if true, otherwise returns string with an unformatted error message.$
+     * Checks if a player can join this team. Returns null if true, otherwise returns a string with an unformatted error message.
+     *
+     * <p>This only performs engine-level checks (already in team, settings, solo mode, spectators, capacity).
+     * Permission/rank gates are handled externally through {@see PlayerSelectTeamEvent}.
+     *
      * @param int $amount The amount of players joining the team.
      */
     public function canJoinTeam(Player $player, int $amount): ?string
@@ -297,14 +298,39 @@ class Team
             }
         } else if ($arena->isSoloGame()) {
             return 'Can not change teams in solo mode!';
-        } else if (!$player->hasPermission(Permissions::RANK_EMERALD)) {
-            return '§l§aEMERALD §r§cor §l§bLEGEND §r§crank required to choose teams! Purchase at §bngmc.co/store§c!'; // Formatted for promotional purposes.
         } else if ($arena->isSpectator($player)) {
             return 'Spectators can not join teams!';
         } else if ($arena->getPlugin()->balanceQueuing() && $arena->areTeamsBalanced()) {
             return 'Teams are balanced, you cannot change teams.';
         } elseif ($this->getSize() + $amount > $arena->getTeamSize()) {
             return 'That team is full!';
+        }
+
+        return null;
+    }
+
+    /**
+     * Attempts to move the given player to this team.
+     *
+     * <p>Performs the engine-level checks, then fires a cancellable {@see PlayerSelectTeamEvent} so
+     * external modules (e.g. rank/permission systems) can gate the join. Returns null on success, or
+     * an error message describing why the join was rejected.
+     *
+     * @param Player $player The player (or party leader) requesting the change.
+     * @param int $amount The amount of players joining as part of this change.
+     */
+    public function selectTeam(Player $player, int $amount): ?string
+    {
+        $error = $this->canJoinTeam($player, $amount);
+        if ($error !== null) {
+            return $error;
+        }
+
+        $event = new PlayerSelectTeamEvent($player, $this->getArena(), $this, $amount);
+        $event->call();
+
+        if ($event->isCancelled()) {
+            return $event->getError() ?? 'You are not allowed to join that team.';
         }
 
         return null;

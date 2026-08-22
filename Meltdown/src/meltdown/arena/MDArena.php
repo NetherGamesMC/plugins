@@ -4,6 +4,7 @@ namespace meltdown\arena;
 
 use libminigames\Arena;
 use libminigames\tasks\CountDownTask;
+use libminigames\utils\RewardEntry;
 use meltdown\arena\handler\BlockHandler;
 use meltdown\arena\handler\PowerupHandler;
 use meltdown\arena\handler\ScoreboardHandler;
@@ -168,36 +169,29 @@ class MDArena extends Arena
     }
 
     /**
-     * @param array<self::DATA_*, array<array{string, int}>> $data
+     * @param Player $player
+     * @return RewardEntry[]
      */
-    public function addParticipation(Player $player, array $data, bool $guildXP = false): void
+    public function getRewards(Player $player): array
     {
         $statsData = $this->getStatsData();
+        $rewards = [];
 
         $minutesPlayed = $this->minutesPlayed[$player->getName()] ?? 0;
         if ($minutesPlayed > 0) {
-            $data[self::DATA_XP][] = [
-                $minutesPlayed . " minutes played",
-                $minutesPlayed
-            ];
+            $rewards[] = new RewardEntry('xp', $minutesPlayed, $minutesPlayed . " minutes played");
         }
 
         $killCount = $statsData->getValue($player, StatsData::MD_KILLS);
         if ($killCount > 0) {
-            $data[self::DATA_XP][] = [
-                $killCount . " kills",
-                $killCount
-            ];
+            $rewards[] = new RewardEntry('xp', $killCount, $killCount . " kills");
         }
 
         if ($this->isWinner($player)) {
-            $data[self::DATA_CREDITS][] = [
-                "Win",
-                2
-            ];
+            $rewards[] = new RewardEntry('credits', 2, "Win");
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        return $rewards;
     }
 
     /**

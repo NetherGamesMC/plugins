@@ -22,11 +22,10 @@ use conquests\utils\entity\ItemEntity;
 use libminigames\Arena;
 use libminigames\Minigame;
 use libminigames\utils\Autoloader;
-use libminigames\utils\LeaderboardData;
 use libVanilla\VanillaPlugin;
 use muqsit\invmenu\InvMenuHandler;
 use muqsit\invmenu\type\util\InvMenuTypeBuilders;
-use NetherGames\NGEssentials\ServerManager;
+use NetherGames\NGEssentials\minigames\LeaderboardData;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\data\SavedDataLoadingException;
 use pocketmine\entity\EntityDataHelper as Helper;
@@ -70,11 +69,17 @@ class Conquests extends Minigame
         $arenaConfig->save();
         $this->arenaConfig = new CQArenaConfig($arenaConfig);
 
-        $this->leaderboards = new LeaderboardData($this->getModes());
-
         $this->getServer()->getCommandMap()->register(CQCommand::class, new CQCommand($this));
 
         $this->getServer()->getPluginManager()->registerEvents(new CQListener($this), $this);
+
+        $this->leaderboards = new LeaderboardData($this->getModes());
+        $leaderboards = $this->getLeaderboards();
+        foreach ($this->getModes() as $i => $mode) {
+            $leaderboards->load('cq_wins', $i, -1, '§l§aWINS LEADERBOARD', '§7Most Conquests wins');
+            $leaderboards->load('cq_flags_captured', $i, -1, '§l§aFLAGS CAPTURED LEADERBOARD', '§7Most flags captured in Conquests');
+            $leaderboards->load('cq_kills', $i, -1, '§l§aKILLS LEADERBOARD', '§7Most kills in Conquests');
+        }
 
         $entityFactory = EntityFactory::getInstance();
         $entityFactory->register(ItemEntity::class, function (World $world, CompoundTag $nbt): ItemEntity {
@@ -110,23 +115,11 @@ class Conquests extends Minigame
         }
 
         VanillaPlugin::FIREBALL()->register($this);
-
-        $leaderboards = $this->getLeaderboards();
-        foreach ($this->getModes() as $i => $mode) {
-            $leaderboards->load('cq_wins', $i, -1, '§l§aWINS LEADERBOARD', '§7Most Conquests wins');
-            $leaderboards->load('cq_flags_captured', $i, -1, '§l§aFLAGS CAPTURED LEADERBOARD', '§7Most flags captured in Conquests');
-            $leaderboards->load('cq_kills', $i, -1, '§l§aKILLS LEADERBOARD', '§7Most kills in Conquests');
-        }
     }
 
     public function getFlagFactory(): FlagFactory
     {
         return $this->flagFactory;
-    }
-
-    public function getLeaderboards(): LeaderboardData
-    {
-        return $this->leaderboards;
     }
 
     public function getModes(): array
@@ -244,33 +237,8 @@ class Conquests extends Minigame
         }
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function getQueuingArenas(int $modeId, string $queuingMode = self::QUEUING_GLOBAL): array
+    public function getLeaderboards(): LeaderboardData
     {
-        $queuingArenas = [];
-        $queuingMobileArenas = [];
-
-        foreach ($this->getArenas($modeId) as $arena) {
-            if (!$arena->isFull() && !$arena->isFinishing()) {
-                if ($arena->isTouchOnly()) {
-                    if ($queuingMode === self::QUEUING_PREFER_MOBILE) {
-                        $queuingMobileArenas[] = $arena;
-                    } elseif ($queuingMode === self::QUEUING_FORCE_MOBILE) {
-                        $queuingArenas[] = $arena;
-                    }
-                } elseif ($queuingMode !== self::QUEUING_FORCE_MOBILE) {
-                    $queuingArenas[] = $arena;
-                }
-            }
-        }
-
-        return array_merge($queuingMobileArenas, $queuingArenas);
-    }
-
-    public function getMinigameTag(): string
-    {
-        return ServerManager::CQ;
+        return $this->leaderboards;
     }
 }

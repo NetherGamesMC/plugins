@@ -22,6 +22,7 @@ namespace duels\tasks;
 
 use duels\DuelsArena;
 use duels\DuelsArenaListener;
+use NetherGames\NGEssentials\NGEssentials;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\player\Player;
 use pocketmine\scheduler\Task;
@@ -52,20 +53,19 @@ class SumoTask extends Task
             $location = $player->getLocation();
             if ($location->distance($spawn) > 15 || $location->getY() < $spawn->getY()) {
                 $team = $arena->getTeam($player);
-                $plugin = $arena->getPlugin();
 
-                if (($damager = $plugin->getEssentials()->getCombatLogger()->getLatestHit($player)) !== null) {
+                if (($damager = NGEssentials::getInstance()->getCombatLogger()->getLatestHit($player)) !== null) {
                     if ($arena->isSoloGame()) {
-                        $arena->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getNameTag(), $damager->getNameTag()], $plugin->getRandomKillMessage(EntityDamageEvent::CAUSE_VOID, true)), true);
+                        $arena->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getNameTag(), $damager->getNameTag()], $arena->getKillMessage($damager, $player, EntityDamageEvent::CAUSE_VOID)), true);
                     } elseif (($damagerTeam = $arena->getTeamNull($damager)) !== null) {
-                        $arena->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$team->getPlayerName($player), $damagerTeam->getPlayerName($damager)], $plugin->getRandomKillMessage(EntityDamageEvent::CAUSE_VOID, true)), true);
+                        $arena->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$team->getPlayerName($player), $damagerTeam->getPlayerName($damager)], $arena->getKillMessage($damager, $player, EntityDamageEvent::CAUSE_VOID)), true);
                     }
 
                     $arena->addKill($damager, $player);
                 } elseif ($arena->isSoloGame()) {
-                    $arena->broadcastMessage(str_replace('{PLAYER}', $player->getNameTag(), $plugin->getRandomKillMessage(EntityDamageEvent::CAUSE_VOID)), true);
+                    $arena->broadcastMessage(str_replace('{PLAYER}', $player->getNameTag(), $arena->getKillMessage(null, $player, EntityDamageEvent::CAUSE_VOID)), true);
                 } else {
-                    $arena->broadcastMessage(str_replace('{PLAYER}', $team->getPlayerName($player), $plugin->getRandomKillMessage(EntityDamageEvent::CAUSE_VOID)), true);
+                    $arena->broadcastMessage(str_replace('{PLAYER}', $team->getPlayerName($player), $arena->getKillMessage(null, $player, EntityDamageEvent::CAUSE_VOID)), true);
                 }
 
                 /** @var DuelsArenaListener $listener */

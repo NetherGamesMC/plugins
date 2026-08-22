@@ -25,10 +25,9 @@ use libminigames\Arena;
 use libminigames\Minigame;
 use libminigames\TeamArena;
 use libminigames\utils\AutoUpgrader;
-use libminigames\utils\LeaderboardData;
 use libVanilla\features\Feature;
 use libVanilla\VanillaPlugin;
-use NetherGames\NGEssentials\ServerManager;
+use NetherGames\NGEssentials\minigames\LeaderboardData;
 use pocketmine\utils\Config;
 use skywars\drops\DropManager;
 use skywars\kits\KitManager;
@@ -69,14 +68,19 @@ class Skywars extends Minigame
         $this->blockQueue = new BlockQueueTask($this->getServer());
         $this->getScheduler()->scheduleRepeatingTask($this->blockQueue, 2 * 20);
 
-        $this->getServer()->getCommandMap()->register(SWCommand::class, new SWCommand($this));
-        $this->getServer()->getPluginManager()->registerEvents(new SWListener($this), $this);
-
         $this->leaderboards = new LeaderboardData($this->getModes());
         foreach ($this->getModes() as $i => $mode) {
             $this->getLeaderboards()->load('sw_*mode*_wins', $i, -1, '§l§a*MODE* WINS LEADERBOARD', '§7Most SkyWars *mode* wins');
             $this->getLeaderboards()->load('sw_*mode*_kills', $i, -1, '§l§a*MODE* KILLS LEADERBOARD', '§7Most SkyWars *mode* kills');
         }
+
+        $this->getServer()->getCommandMap()->register(SWCommand::class, new SWCommand($this));
+        $this->getServer()->getPluginManager()->registerEvents(new SWListener($this), $this);
+    }
+
+    public function getLeaderboards(): LeaderboardData
+    {
+        return $this->leaderboards;
     }
 
     /**
@@ -102,11 +106,6 @@ class Skywars extends Minigame
         ];
     }
 
-    public function getLeaderboards(): LeaderboardData
-    {
-        return $this->leaderboards;
-    }
-
     public function getBlockQueue(): BlockQueueTask
     {
         return $this->blockQueue;
@@ -125,11 +124,6 @@ class Skywars extends Minigame
     public function generateNewArena(int $modeId, bool $privateGame = false): Arena
     {
         return new SWArena($this, $modeId, $this->mapsPlayed++, $privateGame);
-    }
-
-    public function getMinigameTag(): string
-    {
-        return ServerManager::SW;
     }
 
     public function getArenaConfig(): SWArenaConfig

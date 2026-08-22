@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace libminigames;
 
+use libminigames\session\GameSession;
 use libminigames\settings\GameSettings;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginException;
@@ -199,17 +200,17 @@ abstract class TeamArena extends Arena
     {
         parent::start();
 
-        $partyManager = $this->getPlugin()->getEssentials()->getPlayerManager()->getSocialManager()->getPartyManager();
-
         foreach ($this->getTeams() as $team) {
             foreach ($team->getPlayers() as $player) {
-                if (($party = $partyManager->getParty($player)) !== null) {
-                    $leaderName = $party->getLeaderName();
+                $groupUUID = GameSession::getSession($player)->getGroupUUID();
 
-                    if (!isset($this->parties[$leaderName])) {
-                        $this->parties[$leaderName] = [$team->getId()];
-                    } elseif (!in_array($team->getId(), $this->parties[$leaderName])) {
-                        $this->parties[$leaderName][] = $team->getId();
+                if ($groupUUID !== null) {
+                    $key = $groupUUID->toString();
+
+                    if (!isset($this->parties[$key])) {
+                        $this->parties[$key] = [$team->getId()];
+                    } elseif (!in_array($team->getId(), $this->parties[$key])) {
+                        $this->parties[$key][] = $team->getId();
                     }
                 }
             }
@@ -244,13 +245,13 @@ abstract class TeamArena extends Arena
 
     public function hasSamePartyOpponents(Player $player): bool
     {
-        $partyManager = $this->getPlugin()->getEssentials()->getPlayerManager()->getSocialManager()->getPartyManager();
+        $groupUUID = GameSession::getSession($player)->getGroupUUID();
 
-        if (($party = $partyManager->getParty($player)) !== null) {
-            return count($this->parties[$party->getLeaderName()] ?? []) > 1;
+        if ($groupUUID === null) {
+            return false;
         }
 
-        return false;
+        return count($this->parties[$groupUUID->toString()] ?? []) > 1;
     }
 
     public function isSoloGame(): bool

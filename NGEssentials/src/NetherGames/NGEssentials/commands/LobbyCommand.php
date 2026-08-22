@@ -21,7 +21,7 @@ declare(strict_types=1);
 
 namespace NetherGames\NGEssentials\commands;
 
-use libminigames\events\MinigameQuitEvent;
+use libminigames\events\player\PlayerQuitEvent;
 use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\permissions\Permissions;
 use NetherGames\NGEssentials\player\PlayerData;
@@ -55,7 +55,7 @@ class LobbyCommand extends BaseCommand
                     $playerManager->transferPlayer($sender);
                 }
             } else {
-                $arena->removePlayer($sender, MinigameQuitEvent::LEAVE);
+                $arena->removePlayer($sender, PlayerQuitEvent::LEAVE);
             }
 
             $plugin->getPlayerData()->setValue($sender, PlayerData::TRACK, '');

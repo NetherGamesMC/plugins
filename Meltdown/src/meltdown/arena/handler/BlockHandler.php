@@ -4,6 +4,7 @@ namespace meltdown\arena\handler;
 
 use meltdown\arena\MDArena;
 use meltdown\utils\math\PlayerTrajectory;
+use NetherGames\NGEssentials\NGEssentials;
 use pocketmine\block\Block;
 use pocketmine\block\BlockTypeIds;
 use pocketmine\block\VanillaBlocks;
@@ -99,7 +100,7 @@ class BlockHandler{
                         }
                     }
 
-                    $combatLogger = $this->arena->getPlugin()->getEssentials()->getCombatLogger();
+                    $combatLogger = NGEssentials::getInstance()->getCombatLogger();
                     if(($lastHit = $combatLogger->getLog($player)->getLatestHit()) !== null && $lastHit->getTime() + 5 > time() && ($damager = $player->getServer()->getPlayerExact($lastHit->getDamagerName())) !== null && $this->getArena()->isInArena($damager)){
                         $this->getArena()->addKill($damager, $player);
                     }

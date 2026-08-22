@@ -24,12 +24,12 @@ declare(strict_types=1);
 namespace libminigames\tasks;
 
 use libminigames\Arena;
-use libminigames\events\MinigameQuitEvent;
+use libminigames\events\player\PlayerQuitEvent;
+use libminigames\session\GameSession;
 use libminigames\TeamArena;
+use libminigames\utils\Icon;
 use libminigames\utils\Items;
 use libminigames\utils\TypeArena;
-use NetherGames\NGEssentials\player\NGPlayer;
-use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\scheduler\Task;
 use pocketmine\utils\TextFormat;
 use pocketmine\world\sound\PopSound;
@@ -37,7 +37,7 @@ use function count;
 
 /**
  * Provides basic countdown task, this task handles queued players in a FIFO (First-In-First-Out) order.
- * You wouldn't have to extends this class as most functionalities will be provided here.
+ * You wouldn't have to extend this class as most functionalities will be provided here.
  *
  * @package libminigames\tasks
  */
@@ -48,8 +48,6 @@ class CountDownTask extends Task
     protected int $countdown = self::COUNTDOWN;
     /** @var string */
     protected string $color = TextFormat::YELLOW;
-    /** @var bool */
-    protected bool $queuing = true;
     /** @var bool */
     protected bool $paused = false;
     /** @var Arena */
@@ -84,26 +82,26 @@ class CountDownTask extends Task
 
         if ($this->countdown > 15 && $joinedPlayers === $maxPlayers) {
             $this->setCountdown(15);
-        } elseif ($this->countdown > self::COUNTDOWN && $joinedPlayers >= $maxPlayers / 2) {
+        }
+
+        if ($this->countdown > self::COUNTDOWN && $joinedPlayers >= $maxPlayers / 2) {
             $this->setCountdown(self::COUNTDOWN);
         }
 
         $arena->addQueuedPlayers();
 
-        if ($arena->getGameSettings()->isPaused()) {
+        $isPaused = $arena->getGameSettings()->isPaused();
+        $arena->refreshWaitingScoreboard($this->countdown, $isPaused);
+
+        if ($isPaused) {
             if (!$this->paused) {
-                $arena->getScoreboard()->setLine($arena->getPlayers(), 5, CustomIcon::HOURGLASS . TextFormat::RED . 'Paused');
+                $arena->refreshWaitingScoreboard($this->countdown, true);
             }
             $this->paused = true;
             return;
         }
 
         if (($joinedPlayers >= $arena->getMinimumPlayers() || $arena->shouldStartImmediately()) && (!$arena->getPlugin()->balanceQueuing() || !$arena instanceof TeamArena || $arena->areTeamsBalanced() || $isPrivate)) {
-            if ($this->queuing && count($players) >= 0.7 * $arena->getMaxSize()) {
-                $arena->getPlugin()->updateQueuing($arena->getModeId());
-                $this->queuing = false;
-            }
-
             switch ($this->countdown) {
                 case 20:
                     $arena->broadcastMessage('§eThe game starts in ' . $this->color . $this->countdown . ' §eseconds!');
@@ -118,11 +116,6 @@ class CountDownTask extends Task
                     $this->color = TextFormat::RED;
 
                     $arena->setStatus(Arena::STATUS_STARTING);
-
-                    if ($this->queuing) {
-                        $arena->getPlugin()->updateQueuing($arena->getModeId());
-                        $this->queuing = false;
-                    }
 
                     if ($arena instanceof TypeArena || count($arena->getMaps()) > 1) {
                         $arena->broadcastMessage(TextFormat::GOLD . 'Voting has ended!');
@@ -148,67 +141,46 @@ class CountDownTask extends Task
                     break;
                 case 0:
                     $arena->start();
-                    $arena->broadcastTitle(CustomIcon::GO, '', 0, 10);
+                    $arena->broadcastTitle(Icon::get('countdown.go', 'GO'), '', 0, 10);
                     $this->getHandler()?->cancel();
                     return;
             }
 
             if ($this->countdown <= 5) {
                 foreach ($arena->getPlayers() as $player) {
-                    /** @var NGPlayer $player */
                     if ($this->countdown <= 3) {
-                        $player->playSound('note.hat', 1, 0.943874);
+                        GameSession::getSession($player)->playSound('note.hat', 1, 0.943874);
                     } else {
                         $arena->getWorld()->addSound($player->getLocation(), new PopSound(), [$player]);
                     }
                 }
 
                 $arena->broadcastMessage('§eThe game starts in ' . $this->color . $this->countdown . ' §eseconds!');
-                $arena->broadcastTitle(match ($this->countdown) {
-                    1 => CustomIcon::ONE,
-                    2 => CustomIcon::TWO,
-                    3 => CustomIcon::THREE,
-                    4 => CustomIcon::FOUR,
-                    5 => CustomIcon::FIVE,
-                    default => '',
-                }, '', 0, 20);
+                $arena->broadcastTitle(Icon::get('countdown.' . $this->countdown, (string)$this->countdown), '', 0, 20);
             }
 
-            $arena->getScoreboard()->setLine($arena->getPlayers(), 5, CustomIcon::HOURGLASS . TextFormat::GREEN . 'Starting in ' . TextFormat::GREEN . $this->countdown . 's');
+            $arena->refreshWaitingScoreboard($this->countdown, $isPaused);
             $this->countdown--;
         } elseif ($joinedPlayers >= 1) {
             if ($this->color === TextFormat::RED) {
                 $players = $arena->getPlayers();
                 foreach ($players as $player) {
-                    $arena->removePlayer($player, MinigameQuitEvent::FINISH);
+                    $arena->removePlayer($player, PlayerQuitEvent::FINISH);
                 }
                 $arena->finishGame();
 
                 $arena->getPlugin()->removeArena($arena);
 
-                if ($arena->getPlugin()->isStandAloneGame()) {
-                    $arena->getPlugin()->updateQueuing($arena->getModeId());
-                }
-
                 $this->getHandler()?->cancel();
 
                 $arena->requeuePlayers($players);
             } else {
-                if (!$this->queuing) {
-                    $arena->getPlugin()->updateQueuing($arena->getModeId());
-                    $this->queuing = true;
-                }
-
                 if ($this->countdown !== self::COUNTDOWN || $this->paused) {
-                    $arena->getScoreboard()->setLine($arena->getPlayers(), 5, CustomIcon::HOURGLASS . TextFormat::GREEN . 'Waiting');
+                    $arena->refreshWaitingScoreboard($this->countdown, $isPaused);
                 }
             }
         } else {
             $arena->getPlugin()->removeArena($arena);
-
-            if ($arena->getPlugin()->isStandAloneGame()) {
-                $arena->getPlugin()->updateQueuing($arena->getModeId());
-            }
 
             $this->getHandler()?->cancel();
         }

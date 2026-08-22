@@ -23,7 +23,7 @@ declare(strict_types=1);
 
 namespace mommasays\games;
 
-use NetherGames\NGEssentials\events\NGChatEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\utils\TextFormat;
 use function array_rand;
 use function strtolower;
@@ -34,7 +34,7 @@ class GameTypeChat extends Game
     /** @var string */
     private string $word;
 
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
         $player = $event->getPlayer();
         $message = $event->getMessage();

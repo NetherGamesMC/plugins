@@ -25,16 +25,18 @@ use libminigames\Minigame;
 use libminigames\settings\GameSettings;
 use libminigames\Team;
 use libminigames\TeamArena;
+use libminigames\utils\RewardEntry;
 use libminigames\utils\StatsData as StatsDataAlias;
 use libminigames\utils\TypeArena;
 use libminigames\utils\TypeArenaTrait;
 use NetherGames\NGEssentials\entity\custom\FloatingText;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
-use pocketmine\entity\Location;
 use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\entity\Location;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
@@ -190,8 +192,9 @@ class SWArena extends TeamArena implements TypeArena
         return $teams;
     }
 
-    public function addParticipation(Player $player, array $data, bool $guildXP = false): void
+    public function getRewards(Player $player): array
     {
+        $rewards = [];
         $modeId = $this->getModeId();
         if (($kills = $this->getStatsData()->getValue($player, StatsDataAlias::KILLS)) !== 0) {
             if (!$this->isDuelsGame()) {
@@ -199,43 +202,35 @@ class SWArena extends TeamArena implements TypeArena
                 $player->sendMessage(CustomIcon::SWORD . $kills . " Kill" . ($kills > 1 ? "s" : ""));
             }
 
-            $data[self::DATA_CREDITS][] = [
-                $kills . " Kill" . ($kills > 1 ? "s" : ""),
-                $kills * (match ($modeId) {
-                    self::MODE_SOLO => 3,
-                    self::MODE_DOUBLES => 4,
-                    default => 1 // duels earns the same amount
-                })
-            ];
+            $rewards[] = new RewardEntry('credits', $kills * (match ($modeId) {
+                self::MODE_SOLO => 3,
+                self::MODE_DOUBLES => 4,
+                default => 1 // duels earns the same amount
+            }), $kills . " Kill" . ($kills > 1 ? "s" : ""));
         }
 
         if ($this->isDuelsGame()) {
             if ($this->isWinner($player)) {
-                $data[self::DATA_CREDITS][] = ['Win', 1];
+                $rewards[] = new RewardEntry('credits', 1, 'Win');
             }
         } else {
-            $guildXP = true;
-
             if (($assists = ($this->assists[$player->getName()] ?? 0)) !== 0) {
-                $data[self::DATA_XP][] = [
-                    $assists . ' Assist' . ($assists > 1 ? 's' : ''),
-                    ceil($assists / 4)
-                ];
+                $rewards[] = new RewardEntry('xp', (int)ceil($assists / 4), $assists . ' Assist' . ($assists > 1 ? 's' : ''));
             }
 
             if ($this->isWinner($player)) {
-                $data[self::DATA_CREDITS][] = ['Win', match ($modeId) {
-                    self::MODE_SOLO => 5,
-                    self::MODE_DOUBLES => 7,
-                    self::MODE_DUELS_SOLO => 2,
-                    self::MODE_DUELS_DOUBLES => 3,
-                    default => 1
-                }];
-                $data[self::DATA_COINS][] = ['Win', 2];
+                $rewards[] = new RewardEntry('credits', match ($modeId) {
+                self::MODE_SOLO => 5,
+                self::MODE_DOUBLES => 7,
+                self::MODE_DUELS_SOLO => 2,
+                self::MODE_DUELS_DOUBLES => 3,
+                default => 1
+            }, 'Win');
+                $rewards[] = new RewardEntry('coins', 2, 'Win');
             }
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        return $rewards;
     }
 
     public function getTeamSize(): int
@@ -289,7 +284,7 @@ class SWArena extends TeamArena implements TypeArena
             $this->getScoreboard()->setLine([$player], 6, CustomIcon::KILLS . TextFormat::GREEN . $statsData->getValue($player, StatsData::SW_KILLS));
         }
 
-        $combatLog = $this->getPlugin()->getEssentials()->getCombatLogger()->getLog($victim);
+        $combatLog = NGEssentials::getInstance()->getCombatLogger()->getLog($victim);
         foreach ($combatLog->getAssists() as $assist) {
             if (($playerAssist = $this->getPlugin()->getServer()->getPlayerExact($assist)) === null || $playerAssist === $player) {
                 continue;
@@ -312,9 +307,6 @@ class SWArena extends TeamArena implements TypeArena
 
     public function sendStats(): void
     {
-        if (!$this->isDuelsGame()) {
-            $this->getStatsData()->sendLeaderboard($this, StatsData::SW_KILLS, '§l§aTOP KILLERS');
-        }
     }
 
     public function bootMinigame(): void
@@ -324,7 +316,7 @@ class SWArena extends TeamArena implements TypeArena
 
         $world = $this->getWorld();
         $leaderboards = $plugin->getLeaderboards();
-        $entityManager = $plugin->getEssentials()->getEntityManager();
+        $entityManager = NGEssentials::getInstance()->getEntityManager();
 
         [$title, $text] = $leaderboards->get('sw_*mode*_wins', $this->getModeId());
         $entityManager->addEntity(new FloatingText(new Location(980.5, 70, 991.5, $world, 0.0, 0.0), $title, $text));

@@ -29,7 +29,7 @@ use bridges\utils\StatsData;
 use bridges\utils\Utils;
 use libminigames\Arena;
 use libminigames\ArenaListener;
-use NetherGames\NGEssentials\events\NGChatEvent;
+use NetherGames\NGEssentials\NGEssentials;
 use pocketmine\block\StainedHardenedClay;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\entity\effect\VanillaEffects;
@@ -43,6 +43,7 @@ use pocketmine\event\entity\EntityShootBowEvent;
 use pocketmine\event\entity\ProjectileHitBlockEvent;
 use pocketmine\event\inventory\CraftItemEvent;
 use pocketmine\event\inventory\InventoryOpenEvent;
+use pocketmine\event\player\PlayerChatEvent;
 use pocketmine\event\player\PlayerDropItemEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerItemConsumeEvent;
@@ -192,7 +193,7 @@ class BridgeArenaListener extends ArenaListener
         if ($player instanceof Player) {
             $team = $this->getArena()->getTeam($player);
             $cause = $event->getCause();
-            $ess = $this->getArena()->getPlugin()->getEssentials();
+            $ess = NGEssentials::getInstance();
 
             switch ($cause) {
                 case EntityDamageEvent::CAUSE_FALL:
@@ -202,14 +203,14 @@ class BridgeArenaListener extends ArenaListener
                     $event->cancel();
 
                     if (($damager = $ess->getCombatLogger()->getLatestHit($player)) !== null && $this->getArena()->isInArena($damager)) {
-                        $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$team->getPlayerName($player), $this->getArena()->getTeam($damager)->getPlayerName($damager)], $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause(), true)));
+                        $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$team->getPlayerName($player), $this->getArena()->getTeam($damager)->getPlayerName($damager)], $this->getArena()->getKillMessage($damager, $player, $event->getCause())));
                         $this->getArena()->addKill($damager, $player);
 
                         $effects = $damager->getEffects();
                         $effects->add(new EffectInstance(VanillaEffects::REGENERATION(), 20 * 5));
                         $effects->add(new EffectInstance(VanillaEffects::STRENGTH(), 20 * 5));
                     } else {
-                        $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $team->getPlayerName($player), $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause())));
+                        $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $team->getPlayerName($player), $this->getArena()->getKillMessage(null, $player, $event->getCause())));
                     }
 
                     $this->onPlayerDeath($player, $team);
@@ -224,7 +225,7 @@ class BridgeArenaListener extends ArenaListener
                                 if ($event instanceof EntityDamageByEntityEvent) {
                                     $damager = $event->getDamager();
                                     if ($damager instanceof Player) {
-                                        $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$team->getPlayerName($player), $this->getArena()->getTeam($damager)->getPlayerName($damager)], $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause())));
+                                        $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$team->getPlayerName($player), $this->getArena()->getTeam($damager)->getPlayerName($damager)], $this->getArena()->getKillMessage($damager, $player, $event->getCause())));
                                         $this->getArena()->addKill($damager, $player);
 
                                         $effects = $damager->getEffects();
@@ -239,20 +240,20 @@ class BridgeArenaListener extends ArenaListener
                             case EntityDamageEvent::CAUSE_VOID:
                             case EntityDamageEvent::CAUSE_LAVA:
                                 if (($damager = $ess->getCombatLogger()->getLatestHit($player)) !== null && $this->getArena()->isInArena($damager)) {
-                                    $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$team->getPlayerName($player), $this->getArena()->getTeam($damager)->getPlayerName($damager)], $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause(), true)));
+                                    $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$team->getPlayerName($player), $this->getArena()->getTeam($damager)->getPlayerName($damager)], $this->getArena()->getKillMessage($damager, $player, $event->getCause())));
                                     $this->getArena()->addKill($damager, $player);
 
                                     $effects = $damager->getEffects();
                                     $effects->add(new EffectInstance(VanillaEffects::REGENERATION(), 20 * 5));
                                     $effects->add(new EffectInstance(VanillaEffects::STRENGTH(), 20 * 5));
                                 } else {
-                                    $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $team->getPlayerName($player), $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause())));
+                                    $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $team->getPlayerName($player), $this->getArena()->getKillMessage(null, $player, $event->getCause())));
                                 }
 
                                 $this->onPlayerDeath($player, $team);
                                 break;
                             default:
-                                $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $team->getPlayerName($player), $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause())));
+                                $this->getArena()->broadcastMessage(str_replace('{PLAYER}', $team->getPlayerName($player), $this->getArena()->getKillMessage(null, $player, $event->getCause())));
                                 $this->onPlayerDeath($player, $team);
                                 break;
                         }
@@ -273,7 +274,7 @@ class BridgeArenaListener extends ArenaListener
         if ($event->getCause() === EntityDamageEvent::CAUSE_ENTITY_ATTACK && $this->getArena()->getGameSettings()->hasInstantSword() && $player instanceof Player && $damager instanceof Player && $damager->getInventory()->getItemInHand() instanceof Sword) {
             $team = $this->getArena()->getTeam($player);
 
-            $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$team->getPlayerName($player), $this->getArena()->getTeam($damager)->getPlayerName($damager)], $this->getArena()->getPlugin()->getRandomKillMessage($event->getCause())));
+            $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$team->getPlayerName($player), $this->getArena()->getTeam($damager)->getPlayerName($damager)], $this->getArena()->getKillMessage($damager, $player, $event->getCause())));
             $this->getArena()->addKill($damager, $player);
 
             $effects = $damager->getEffects();
@@ -290,7 +291,7 @@ class BridgeArenaListener extends ArenaListener
     {
         $arena = $this->getArena();
         $plugin = $arena->getPlugin();
-        $plugin->getEssentials()->getCombatLogger()->wipeLog($player);
+        NGEssentials::getInstance()->getCombatLogger()->wipeLog($player);
 
         $team->respawnPlayer($player);
 
@@ -309,29 +310,24 @@ class BridgeArenaListener extends ArenaListener
         $event->getEntity()->flagForDespawn();
     }
 
-    public function onPlayerChat(NGChatEvent $event): void
+    public function onPlayerChat(PlayerChatEvent $event): void
     {
         $player = $event->getPlayer();
 
         if ($this->getArena()->isSpectator($player)) {
-            $event->setDisplayName(TextFormat::clean($player->getDisplayName()));
             $event->setRecipients($this->getArena()->getSpectators());
-            $event->setPrefix('§7Dead Chat > ');
-            $event->setStaffPrefix('§7Dead Chat Relay > ');
-            $event->setSplitter(': ');
-        } elseif ($this->getArena()->isSoloGame()) {
-            $event->setDisplayName($player->getDisplayName());
-        } else {
+            $event->setMessage('§7Dead Chat > ' . $event->getMessage());
+            $this->dispatchScopedChat($event);
+        } elseif (!$this->getArena()->isSoloGame()) {
             $team = $this->getArena()->getTeam($player);
-            $event->setDisplayName($team->getPlayerName($player));
 
             if ($this->getArena()->isRunning()) {
                 if (str_starts_with(TextFormat::clean($event->getMessage()), '!')) {
                     $event->setMessage(preg_replace('/!/', '', $event->getMessage(), 1));
                 } else {
                     $event->setRecipients($team->getAlivePlayers());
-                    $event->setPrefix($team->getColor() . 'Team > ');
-                    $event->setStaffPrefix('§fTeam Chat Relay > ');
+                    $event->setMessage($team->getColor() . 'Team > ' . $event->getMessage());
+                    $this->dispatchScopedChat($event);
                 }
             }
         }

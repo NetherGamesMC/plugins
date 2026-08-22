@@ -30,6 +30,7 @@ use mommasays\tasks\CountDownTask;
 use mommasays\tasks\MatchTimeTask;
 use mommasays\utils\CageSpawner;
 use mommasays\utils\StatsData;
+use libminigames\utils\RewardEntry;
 use NetherGames\NGEssentials\player\NGPlayer;
 use NetherGames\NGEssentials\utils\CustomIcon;
 use NetherGames\NGEssentials\utils\TextUtils;
@@ -182,28 +183,24 @@ class MSArena extends Arena
         return $results;
     }
 
-    public function addParticipation(Player $player, array $data, bool $guildXP = false): void
+    /**
+     * @param Player $player
+     * @return RewardEntry[]
+     */
+    public function getRewards(Player $player): array
     {
-        if ($this->getPoints($player) === MatchTimeTask::GAMES_PLAYING) {
-            $data[self::DATA_XP][] = [
-                'Perfect Run',
-                5
-            ];
+        $rewards = [];
 
-            $data[self::DATA_CREDITS][] = [
-                'Perfect Run',
-                8
-            ];
+        if ($this->getPoints($player) === MatchTimeTask::GAMES_PLAYING) {
+            $rewards[] = new RewardEntry('xp', 5, 'Perfect Run');
+            $rewards[] = new RewardEntry('credits', 8, 'Perfect Run');
         }
 
         if ($this->isWinner($player)) {
-            $data[self::DATA_CREDITS][] = [
-                'Win',
-                6
-            ];
+            $rewards[] = new RewardEntry('credits', 6, 'Win');
         }
 
-        parent::addParticipation($player, $data, $guildXP);
+        return $rewards;
     }
 
     /**

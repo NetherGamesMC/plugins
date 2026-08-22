@@ -25,6 +25,7 @@ use duels\utils\Items;
 use duels\utils\StatsData;
 use libminigames\Team;
 use libminigames\TeamArena;
+use NetherGames\NGEssentials\NGEssentials;
 use pocketmine\player\Player;
 use function str_replace;
 
@@ -69,10 +70,10 @@ class DuelsTeam extends Team
         parent::removePlayer($player, $teamChange);
 
         if ($this->getArena()->isRunning() && !$this->getArena()->isSpectator($player)) {
-            $ess = $this->getArena()->getPlugin()->getEssentials();
+            $ess = NGEssentials::getInstance();
 
             if (($damager = $ess->getCombatLogger()->getLatestHit($player)) !== null && $this->getArena()->isInArena($damager)) {
-                $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getNameTag(), $damager->getNameTag()], $this->getArena()->getPlugin()->getRandomKillMessage(1)), true);
+                $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getNameTag(), $damager->getNameTag()], $this->getArena()->getKillMessage($damager, $player, 1)), true);
 
                 $this->getArena()->addKill($damager, $player);
             }

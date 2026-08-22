@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace skywars\handler;
 
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\cosmetics\CosmeticHandler;
 use NetherGames\NGEssentials\player\cosmetics\types\game\cage\CagesCosmetic;
 use NetherGames\NGEssentials\player\cosmetics\utils\Cage;
@@ -135,7 +136,7 @@ abstract class BaseHandler
                         $player->teleport($spawn);
                     }
 
-                    //$player->sendTip(TextFormat::YELLOW . 'Selected Kit: ' . TextFormat::GREEN . (Kits::getNames($player)[$arena->getPlugin()->getEssentials()->getPlayerData()->getInt($player, PlayerData::KIT)] ?? 'Random Kit'));
+                    //$player->sendTip(TextFormat::YELLOW . 'Selected Kit: ' . TextFormat::GREEN . (Kits::getNames($player)[NGEssentials::getInstance()->getPlayerData()->getInt($player, PlayerData::KIT)] ?? 'Random Kit'));
                 }
             }
         } elseif ($timePassed === 0) {
@@ -146,7 +147,7 @@ abstract class BaseHandler
             $type = $arena->getType();
 
             /** @var SWStore $category */
-            $category = $plugin->getEssentials()->getPlayerManager()->getStore()->getCategory(SWStore::ID);
+            $category = NGEssentials::getInstance()->getPlayerManager()->getStore()->getCategory(SWStore::ID);
 
             foreach ($arena->getAlivePlayers() as $player) {
                 /** @var NGPlayer $player */

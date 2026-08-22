@@ -33,6 +33,7 @@ use libminigames\settings\SettingsDescription;
 use murdermystery\gamemodes\classic\MMArenaClassic;
 use murdermystery\gamemodes\infection\MMArenaInfection;
 use murdermystery\utils\MMChance;
+use NetherGames\NGEssentials\NGEssentials;
 use pocketmine\player\Player;
 use function array_search;
 use function array_unshift;
@@ -70,7 +71,7 @@ final class MMSettings extends GameSettings
 
         $dropdownElement = static function (Arena $arena, string $text, int $type, ?Player $currentPlayer, callable $onSelect): Dropdown {
             $players = $arena->getAlivePlayers();
-            $playerManager = $arena->getPlugin()->getEssentials()->getPlayerManager();
+            $playerManager = NGEssentials::getInstance()->getPlayerManager();
 
             shuffle($players);
 

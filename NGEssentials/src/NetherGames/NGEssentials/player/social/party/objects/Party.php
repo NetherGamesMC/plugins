@@ -24,6 +24,8 @@ namespace NetherGames\NGEssentials\player\social\party\objects;
 use JsonException;
 use NetherGames\NGEssentials\NGEssentials;
 use pocketmine\player\Player;
+use Ramsey\Uuid\Uuid;
+use Ramsey\Uuid\UuidInterface;
 use function array_diff;
 use function count;
 use function in_array;
@@ -33,15 +35,19 @@ use const JSON_THROW_ON_ERROR;
 
 class Party
 {
+    private UuidInterface $uuid;
+
     public function __construct(
-        private string $leaderName,
+        private string        $leaderName,
         /** @var string[] */
-        private array  $members = [],
-        private bool   $public = false,
-        private bool   $privateGames = false,
-        private bool   $playerRandomization = true,
+        private array         $members = [],
+        private bool          $public = false,
+        private bool          $privateGames = false,
+        private bool          $playerRandomization = true,
+        ?UuidInterface       $uuid = null,
     )
     {
+        $this->uuid = $uuid ?? Uuid::uuid4();
     }
 
     public static function fromString(string $string): ?Party
@@ -50,13 +56,24 @@ class Party
             $data = json_decode($string, true, 512, JSON_THROW_ON_ERROR);
 
             if (isset($data['leader'])) {
-                return new Party($data['leader'], $data['members'] ?? [], $data['public'] ?? false, $data['private-games'] ?? false, $data['player-randomization'] ?? true);
+                $uuid = isset($data['uuid']) && Uuid::isValid($data['uuid']) ? Uuid::fromString($data['uuid']) : null;
+
+                return new Party($data['leader'], $data['members'] ?? [], $data['public'] ?? false, $data['private-games'] ?? false, $data['player-randomization'] ?? true, $uuid);
             }
         } catch (JsonException $e) {
 
         }
 
         return null;
+    }
+
+    /**
+     * The immutable, network-wide identity of this party. This value stays the same
+     * regardless of leadership changes or which server hosts the party.
+     */
+    public function getUuid(): UuidInterface
+    {
+        return $this->uuid;
     }
 
     public function getLeader(): ?Player
@@ -128,6 +145,7 @@ class Party
         $data = [];
 
         $data['leader'] = $this->getLeaderName();
+        $data['uuid'] = $this->getUuid()->toString();
         if (count($members = $this->getMembers()) !== 0) {
             $data['members'] = $members;
         }

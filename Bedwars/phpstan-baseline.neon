@@ -37,12 +37,6 @@ parameters:
 			path: src/bedwars/utils/Utils.php
 
 		-
-			message: '#^Cannot unset property bedwars\\utils\\entity\\mob\\BaseMob\:\:\$team because it might have hooks in a subclass\.$#'
-			identifier: unset.possiblyHookedProperty
-			count: 1
-			path: src/bedwars/utils/entity/mob/BaseMob.php
-
-		-
 			message: '#^Property pocketmine\\world\\Explosion\:\:\$affectedBlocks \(array\<int, pocketmine\\block\\Block\>\) does not accept array\<pocketmine\\block\\Block\>\.$#'
 			identifier: assign.propertyType
 			count: 1

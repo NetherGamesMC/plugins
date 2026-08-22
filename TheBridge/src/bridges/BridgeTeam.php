@@ -31,6 +31,7 @@ use bridges\utils\Utils;
 use libminigames\Team;
 use libminigames\TeamArena;
 use NetherGames\NGEssentials\entity\custom\FloatingText;
+use NetherGames\NGEssentials\NGEssentials;
 use NetherGames\NGEssentials\player\cosmetics\CosmeticHandler;
 use NetherGames\NGEssentials\player\cosmetics\utils\Cage;
 use NetherGames\NGEssentials\player\NGPlayer;
@@ -38,6 +39,7 @@ use NetherGames\NGEssentials\utils\CustomIcon;
 use NetherGames\NGEssentials\utils\TextUtils;
 use pocketmine\color\Color;
 use pocketmine\entity\Location;
+use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\item\enchantment\EnchantmentInstance;
 use pocketmine\item\enchantment\VanillaEnchantments;
 use pocketmine\item\Item;
@@ -85,7 +87,7 @@ class BridgeTeam extends Team
         $this->pointPos = $arenaConfig->getTeamPoint($this->getArena(), $this->getId());
         $this->spawnPos = $arenaConfig->getTeamSpawn($this->getArena(), $world, $this->getId());
 
-        $this->getArena()->getPlugin()->getEssentials()->getEntityManager()->addEntity(new FloatingText(Location::fromObject($this->pointPos, $world), TextFormat::BOLD . $this->getColor() . ucfirst($this->getName()) . ' Goal', TextFormat::ITALIC . TextFormat::YELLOW . 'Jump in to score!'));
+        NGEssentials::getInstance()->getEntityManager()->addEntity(new FloatingText(Location::fromObject($this->pointPos, $world), TextFormat::BOLD . $this->getColor() . ucfirst($this->getName()) . ' Goal', TextFormat::ITALIC . TextFormat::YELLOW . 'Jump in to score!'));
 
         $helmet = VanillaItems::LEATHER_CAP();
         $chestplate = VanillaItems::LEATHER_TUNIC();
@@ -242,10 +244,10 @@ class BridgeTeam extends Team
         parent::removePlayer($player, $teamChange);
 
         if ($this->getArena()->isRunning() && !$this->getArena()->isSpectator($player)) {
-            $ess = $this->getArena()->getPlugin()->getEssentials();
+            $ess = NGEssentials::getInstance();
 
             if (($damager = $ess->getCombatLogger()->getLatestHit($player)) !== null && $this->getArena()->isInArena($damager)) {
-                $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getNameTag(), $damager->getNameTag()], $this->getArena()->getPlugin()->getRandomKillMessage(1)), true);
+                $this->getArena()->broadcastMessage(str_replace(['{PLAYER}', '{DAMAGER}'], [$player->getNameTag(), $damager->getNameTag()], $this->getArena()->getKillMessage($damager, $player, EntityDamageEvent::CAUSE_ENTITY_ATTACK)), true);
 
                 $this->getArena()->addKill($damager, $player);
             }
