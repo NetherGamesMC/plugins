@@ -765,7 +765,7 @@ class MinigameListener implements Listener
                                     if ($child instanceof Arrow) {
                                         GameSession::getSession($damager)->playSound('random.orb');
                                         $damager->sendMessage($playerName . TextFormat::YELLOW . ' is on ' . TextFormat::RED . round(($player->getHealth() - $event->getFinalDamage()) / 2, 1) . Icon::get('heart'));
-                                    } else if ($child->getNetworkTypeId() === EntityIds::FIREBALL) {
+                                    } else if ($child !== null && $child->getNetworkTypeId() === EntityIds::FIREBALL) {
                                         GameSession::getSession($damager)->playSound('random.orb');
                                         $distance = $player->getPosition()->distance($damager->getPosition());
                                         if ($distance >= 50) {
