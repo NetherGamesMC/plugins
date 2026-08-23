@@ -6,12 +6,12 @@
   "version": "dev-stable",
   "require": {
     "php": "^8.0",
-    "ramsey/uuid": "^4.0"
+    "ramsey/uuid": "^4.0",
+    "nethergamesmc/libasyncio": "dev-stable",
+    "nethergamesmc/libforms": "dev-stable",
   },
   "require-dev": {
     "phpstan/phpstan": "2.1.29",
-    "nethergamesmc/libasyncio": "dev-stable",
-    "nethergamesmc/libforms": "dev-stable",
     "nethergamesmc/pocketmine-mp": "dev-stable"
   },
   "autoload": {

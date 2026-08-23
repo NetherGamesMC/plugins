@@ -24,7 +24,7 @@
   ],
   "autoload": {
     "psr-4": {
-      "lobby\\": "/"
+      "lobby\\": "src/lobby/"
     }
   },
   "minimum-stability": "dev"

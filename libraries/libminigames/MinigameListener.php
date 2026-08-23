@@ -79,6 +79,7 @@ use pocketmine\event\player\PlayerKickEvent;
 use pocketmine\event\player\PlayerQuitEvent as PMPlayerQuitEvent;
 use pocketmine\event\server\CommandEvent;
 use pocketmine\item\Item;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\network\mcpe\protocol\types\InputMode;
 use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
@@ -764,7 +765,7 @@ class MinigameListener implements Listener
                                     if ($child instanceof Arrow) {
                                         GameSession::getSession($damager)->playSound('random.orb');
                                         $damager->sendMessage($playerName . TextFormat::YELLOW . ' is on ' . TextFormat::RED . round(($player->getHealth() - $event->getFinalDamage()) / 2, 1) . Icon::get('heart'));
-                                    } else if ($child instanceof Fireball) {
+                                    } else if ($child->getNetworkTypeId() === EntityIds::FIREBALL) {
                                         GameSession::getSession($damager)->playSound('random.orb');
                                         $distance = $player->getPosition()->distance($damager->getPosition());
                                         if ($distance >= 50) {
