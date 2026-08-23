@@ -22,5 +22,10 @@
       }
     }
   ],
+  "autoload": {
+    "psr-4": {
+      "lobby\\": "/"
+    }
+  },
   "minimum-stability": "dev"
 }
