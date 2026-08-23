@@ -24,6 +24,7 @@ namespace soccer;
 use libminigames\Arena;
 use libminigames\Minigame;
 use libminigames\utils\ArenaConfig;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\utils\Config;
 use soccer\utils\SCArenaConfig;
 use soccer\utils\StatsData;
@@ -72,5 +73,10 @@ class Soccer extends Minigame
     public function getArenaConfig(): ArenaConfig
     {
         return $this->arenaConfig;
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 }

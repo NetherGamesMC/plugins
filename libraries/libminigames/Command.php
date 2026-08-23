@@ -67,7 +67,7 @@ abstract class Command extends \pocketmine\command\Command
 
         parent::__construct(strtolower($plugin->getMinigameTag()));
 
-        $this->setPermission('minigame.command');
+        $this->setPermission($this->plugin->getCommandPermission());
         $this->setAliases([strtolower($this->getPlugin()->getMinigameName())]);
         $this->setDescription($this->getPlugin()->getMinigameName() . ' Command');
     }

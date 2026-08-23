@@ -33,6 +33,7 @@ use murdermystery\utils\MMArenaConfig;
 use murdermystery\utils\MMChance;
 use murdermystery\utils\MMKnife;
 use NetherGames\NGEssentials\ServerManager;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\utils\Config;
 use function array_filter;
 use function is_dir;
@@ -94,5 +95,10 @@ class MurderMystery extends Minigame
     public function getChanceHandler(): MMChance
     {
         return $this->chance;
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 }

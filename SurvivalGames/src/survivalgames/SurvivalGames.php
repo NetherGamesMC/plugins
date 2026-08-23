@@ -12,6 +12,7 @@ use libVanilla\features\Feature;
 use libVanilla\VanillaPlugin;
 use muqsit\invmenu\InvMenuHandler;
 use NetherGames\NGEssentials\NGEssentials;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use NetherGames\NGEssentials\utils\SkinUtils;
 use pocketmine\entity\Skin;
 use pocketmine\player\Player;
@@ -139,5 +140,10 @@ class SurvivalGames extends Minigame
     public function getArenaConfig(): SGArenaConfig
     {
         return $this->arenaConfig;
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 }

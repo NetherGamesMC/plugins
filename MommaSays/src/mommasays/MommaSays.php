@@ -29,6 +29,7 @@ use libminigames\utils\ArenaConfig;
 use mommasays\utils\data\BlockSets;
 use mommasays\utils\MSArenaConfig;
 use mommasays\utils\StatsData;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\player\Player;
 use pocketmine\utils\Config;
 
@@ -80,5 +81,10 @@ class MommaSays extends Minigame
     public function getArenaConfig(): ArenaConfig
     {
         return $this->arenaConfig;
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 }

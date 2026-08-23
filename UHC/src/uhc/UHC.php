@@ -9,6 +9,7 @@ use libminigames\Minigame;
 use libminigames\TeamArena;
 use libminigames\utils\ArenaConfig;
 use libVanilla\VanillaPlugin;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\utils\Config;
 use uhc\command\UHCCommand;
 use uhc\game\UHCArena;
@@ -72,5 +73,10 @@ class UHC extends Minigame
     public function getArenaConfig(): ArenaConfig
     {
         return $this->arenaConfig;
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 }

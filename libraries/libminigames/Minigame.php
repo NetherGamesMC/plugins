@@ -222,6 +222,16 @@ abstract class Minigame extends PluginBase
      */
     abstract public function registerClasses(): void;
 
+    /**
+     * The permission used by this minigame's commands.
+     *
+     * <p>Every minigame is expected to return an identifier that is registered by the plugin's
+     * own config, typically the player-default permission used for in-game commands.
+     *
+     * @return string
+     */
+    abstract public function getCommandPermission(): string;
+
     public function getMapDisplayName(string $mapName, bool $includeTag = false): string
     {
         $e = explode('-', $mapName);

@@ -28,6 +28,7 @@ use libminigames\utils\AutoUpgrader;
 use libVanilla\features\Feature;
 use libVanilla\VanillaPlugin;
 use NetherGames\NGEssentials\minigames\LeaderboardData;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\utils\Config;
 use skywars\drops\DropManager;
 use skywars\kits\KitManager;
@@ -142,5 +143,10 @@ class Skywars extends Minigame
                     subject: $mapName
                 ) && is_dir("{$this->getDataFolder()}/arenas/$mapName"),
         );
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 }

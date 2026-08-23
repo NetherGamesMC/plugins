@@ -30,6 +30,7 @@ use libminigames\TeamArena;
 use libminigames\utils\Autoloader;
 use muqsit\invmenu\InvMenuHandler;
 use NetherGames\NGEssentials\minigames\LeaderboardData;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\utils\Config;
 use function dirname;
 
@@ -97,5 +98,10 @@ class TheBridge extends Minigame
     public function generateNewArena(int $modeId, bool $privateGame = false): Arena
     {
         return new BridgeArena($this, $modeId, $this->mapsPlayed++, $privateGame);
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 }

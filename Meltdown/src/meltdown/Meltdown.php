@@ -4,6 +4,7 @@ namespace meltdown;
 
 use libminigames\Minigame;
 use NetherGames\NGEssentials\entity\custom\CustomActorList;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\block\RuntimeBlockStateRegistry;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\entity\Location;
@@ -86,5 +87,10 @@ class Meltdown extends Minigame
     public function getArenaConfig(): MDArenaConfig
     {
         return $this->arenaConfig;
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 }

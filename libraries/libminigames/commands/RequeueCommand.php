@@ -44,7 +44,7 @@ class RequeueCommand extends \pocketmine\command\Command
 
         parent::__construct('requeue');
 
-        $this->setPermission('minigame.command');
+        $this->setPermission($this->plugin->getCommandPermission());
         $this->setDescription('Instantly requeue into another game');
     }
 

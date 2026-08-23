@@ -26,6 +26,7 @@ use libVanilla\VanillaPlugin;
 use muqsit\invmenu\InvMenuHandler;
 use muqsit\invmenu\type\util\InvMenuTypeBuilders;
 use NetherGames\NGEssentials\minigames\LeaderboardData;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\data\SavedDataLoadingException;
 use pocketmine\entity\EntityDataHelper as Helper;
@@ -240,5 +241,10 @@ class Conquests extends Minigame
     public function getLeaderboards(): LeaderboardData
     {
         return $this->leaderboards;
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 }

@@ -34,6 +34,7 @@ use libVanilla\VanillaPlugin;
 use muqsit\invmenu\InvMenuHandler;
 use muqsit\invmenu\type\util\InvMenuTypeBuilders;
 use NetherGames\NGEssentials\minigames\LeaderboardData;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\data\SavedDataLoadingException;
 use pocketmine\entity\EntityDataHelper as Helper;
@@ -141,6 +142,11 @@ final class Bedwars extends Minigame
         }
 
         VanillaPlugin::FIREBALL()->register($this);
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 
     public function getModes(): array

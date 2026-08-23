@@ -27,6 +27,7 @@ use libminigames\Arena;
 use libminigames\Minigame;
 use libVanilla\VanillaPlugin;
 use NetherGames\NGEssentials\ServerManager;
+use NetherGames\NGEssentials\player\permissions\Permissions;
 use pocketmine\utils\Config;
 use function array_filter;
 use function is_dir;
@@ -78,5 +79,10 @@ class Duels extends Minigame
     public function getArenaConfig(): DuelsArenaConfig
     {
         return $this->arenaConfig;
+    }
+
+    public function getCommandPermission(): string
+    {
+        return Permissions::DEFAULT_COMMAND_PERMISSION;
     }
 }
