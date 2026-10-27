@@ -22,29 +22,24 @@ declare(strict_types=1);
 namespace NetherGames\NGEssentials\events;
 
 use pocketmine\event\player\PlayerEvent;
+use pocketmine\network\mcpe\protocol\types\InputMode;
 use pocketmine\player\Player;
 
 class PlayerInputChangeEvent extends PlayerEvent
 {
     public function __construct(Player      $player,
-                                private int $lastInputMode,
-                                private int $newInputMode)
+                                private InputMode $lastInputMode,
+                                private InputMode $newInputMode)
     {
         $this->player = $player;
     }
 
-    /**
-     * @return int
-     */
-    public function getLastInputMode(): int
+    public function getLastInputMode(): InputMode
     {
         return $this->lastInputMode;
     }
 
-    /**
-     * @return int
-     */
-    public function getNewInputMode(): int
+    public function getNewInputMode(): InputMode
     {
         return $this->newInputMode;
     }

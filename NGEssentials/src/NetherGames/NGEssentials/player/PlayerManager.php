@@ -412,7 +412,7 @@ class PlayerManager extends BaseClass
                 $data,
                 function () use ($player, $server): void {
                     if ($player->isConnected()) {
-                        $player->getNetworkSession()->sendDataPacket(TransferPacket::create($server->getUniqueId(), -1, false), true);
+                        $player->getNetworkSession()->sendDataPacket(TransferPacket::create($server->getUniqueId(), -1, false, null), true);
 
                         foreach ($this->getEnforcementHandler()->isTracking($player->getName()) as $staffMember) {
                             $this->forceTransfer($staffMember, $server);

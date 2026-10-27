@@ -17,7 +17,6 @@ use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper;
 use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
 use pocketmine\network\mcpe\protocol\types\PlayerPermissions;
-use pocketmine\network\mcpe\protocol\UpdateAbilitiesPacket;
 use pocketmine\player\Player;
 use Ramsey\Uuid\Uuid;
 use Ramsey\Uuid\UuidInterface;
@@ -46,7 +45,7 @@ trait CustomGeometryTrait
         $name = $this->getName();
         $networkSession = $player->getNetworkSession();
 
-        $networkSession->sendDataPacket(PlayerListPacket::add([
+        $networkSession->sendDataPacket(PlayerListPacket::create([
             PlayerListEntry::createAdditionEntry($this->skinUuid, $entityID, $name, $networkSession->getTypeConverter()->getSkinAdapter()->toSkinData($skin))
         ]));
 
@@ -58,7 +57,7 @@ trait CustomGeometryTrait
             ProtocolGameMode::SURVIVAL,
             $this->getAllNetworkData(),
             new PropertySyncData([], []),
-            UpdateAbilitiesPacket::create(new AbilitiesData(CommandPermissions::NORMAL, PlayerPermissions::VISITOR, $this->getId() /* TODO: this should be unique ID */, [
+            new AbilitiesData(CommandPermissions::NORMAL, PlayerPermissions::VISITOR, $this->getId() /* TODO: this should be unique ID */, [
                 new AbilitiesLayer(
                     AbilitiesLayer::LAYER_BASE,
                     array_fill(0, AbilitiesLayer::NUMBER_OF_ABILITIES, false),
@@ -66,12 +65,12 @@ trait CustomGeometryTrait
                     0.0,
                     0.0
                 )
-            ])),
+            ]),
             array_values($this->links),
             "", DeviceOS::UNKNOWN
         ));
 
-        $networkSession->sendDataPacket(PlayerListPacket::remove([PlayerListEntry::createRemovalEntry($this->skinUuid)]));
+        $networkSession->sendDataPacket(PlayerListPacket::create([PlayerListEntry::createRemovalEntry($this->skinUuid)]));
     }
 
     abstract public function getSkin(): Skin;

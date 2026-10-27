@@ -41,7 +41,6 @@ use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper;
 use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
 use pocketmine\network\mcpe\protocol\types\PlayerPermissions;
-use pocketmine\network\mcpe\protocol\UpdateAbilitiesPacket;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 use Ramsey\Uuid\Uuid;
@@ -81,7 +80,7 @@ class CustomHuman extends Custom
             ProtocolGameMode::SURVIVAL,
             $this->metadata->getAll(),
             new PropertySyncData([], []),
-            UpdateAbilitiesPacket::create(new AbilitiesData(CommandPermissions::NORMAL, PlayerPermissions::VISITOR, $this->getId() /* TODO: this should be unique ID */, [
+            new AbilitiesData(CommandPermissions::NORMAL, PlayerPermissions::VISITOR, $this->getId() /* TODO: this should be unique ID */, [
                 new AbilitiesLayer(
                     AbilitiesLayer::LAYER_BASE,
                     array_fill(0, AbilitiesLayer::NUMBER_OF_ABILITIES, false),
@@ -89,7 +88,7 @@ class CustomHuman extends Custom
                     0.0,
                     0.0
                 )
-            ])),
+            ]),
             [],
             "",
             DeviceOS::UNKNOWN
@@ -104,11 +103,11 @@ class CustomHuman extends Custom
     public function spawn(Player $player): void
     {
         $networkSession = $player->getNetworkSession();
-        $networkSession->sendDataPacket(PlayerListPacket::add([$entry = $this->getListEntry($networkSession->getTypeConverter())]));
+        $networkSession->sendDataPacket(PlayerListPacket::create([$this->getListEntry($networkSession->getTypeConverter())]));
 
         parent::spawn($player);
 
-        $networkSession->sendDataPacket(PlayerListPacket::remove([$entry]));
+        $networkSession->sendDataPacket(PlayerListPacket::create([PlayerListEntry::createRemovalEntry($this->uuid)]));
     }
 
     public function getListEntry(TypeConverter $typeConverter): PlayerListEntry

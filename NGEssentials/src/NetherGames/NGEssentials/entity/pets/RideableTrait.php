@@ -58,7 +58,7 @@ trait RideableTrait
             $location->yaw,
             $location->yaw,
             array_map(static function (Attribute $attr): NetworkAttribute {
-                return new NetworkAttribute($attr->getId(), $attr->getMinValue(), $attr->getMaxValue(), $attr->getValue(), $attr->getDefaultValue(), []);
+                return new NetworkAttribute($attr->getId(), $attr->getMinValue(), $attr->getMaxValue(), $attr->getValue());
             }, $this->attributeMap->getAll()),
             $this->getAllNetworkData(),
             new PropertySyncData([], []),

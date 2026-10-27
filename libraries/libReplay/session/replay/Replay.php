@@ -56,7 +56,6 @@ use pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper;
 use pocketmine\network\mcpe\protocol\types\LevelEvent;
 use pocketmine\network\mcpe\protocol\types\LevelSoundEvent;
 use pocketmine\network\mcpe\protocol\types\ParticleIds;
-use pocketmine\network\mcpe\protocol\UpdateAbilitiesPacket;
 use pocketmine\player\IPlayer;
 use pocketmine\player\Player;
 use pocketmine\utils\AssumptionFailedError;
@@ -446,9 +445,9 @@ class Replay
             case PlayerListPacket::NETWORK_ID:
                 /** @var PlayerListPacket $packet FOR PLAYER ENTITIES */
                 $uuidConvertor = $this->getUuidConverter();
-                if ($packet->type === PlayerListPacket::TYPE_ADD) {
-                    $convertor = $this->getConvertor();
-                    foreach ($packet->entries as $entry) {
+                $convertor = $this->getConvertor();
+                foreach ($packet->getEntries() as $entry) {
+                    if ($entry->type === PlayerListPacket::TYPE_ADD) {
                         if (($convertor->getRuntimeId($internalActorUniqueId = $entry->actorUniqueId)) === null) {
                             $runtimeActorUniqueId = $convertor->addEntity($internalActorUniqueId);
                             $runtimeUuid = $uuidConvertor->addEntity($entry->uuid);
@@ -459,9 +458,7 @@ class Replay
                         } else {
                             return false;
                         }
-                    }
-                } else {
-                    foreach ($packet->entries as $entry) {
+                    } else {
                         /** @var UuidInterface $runtimeUuid */
                         $runtimeUuid = $uuidConvertor->getRuntimeUuid($internalUuid = $entry->uuid);
 
@@ -533,12 +530,12 @@ class Replay
                             $packet->pitch
                         );
 
-                        $packet->abilitiesPacket = UpdateAbilitiesPacket::create(new AbilitiesData(
-                            $packet->abilitiesPacket->getData()->getCommandPermission(),
-                            $packet->abilitiesPacket->getData()->getPlayerPermission(),
+                        $packet->abilities = new AbilitiesData(
+                            $packet->abilities->getCommandPermission(),
+                            $packet->abilities->getPlayerPermission(),
                             $runtimeActorRuntimeId,
-                            $packet->abilitiesPacket->getData()->getAbilityLayers(),
-                        ));
+                            $packet->abilities->getAbilityLayers(),
+                        );
 
                         foreach ($packet->links as $link) {
                             if (!$this->convertLink($link)) {

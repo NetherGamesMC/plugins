@@ -20,6 +20,9 @@ class PlayerUtils
                 $player->getLocation()->getZ(),
                 100,
                 $pitch,
+                0,
+                false,
+                null,
                 null
             )
         );

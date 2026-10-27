@@ -11,6 +11,7 @@ use pocketmine\network\mcpe\protocol\types\entity\Attribute as NetworkAttribute;
 use pocketmine\network\mcpe\protocol\types\entity\PropertySyncData;
 use pocketmine\player\Player;
 use function array_map;
+use function array_values;
 
 class CustomFlagEntity extends BaseFlagEntity
 {
@@ -50,9 +51,9 @@ class CustomFlagEntity extends BaseFlagEntity
             $this->location->yaw,
             $this->location->yaw, //TODO: head yaw
             $this->location->yaw, //TODO: body yaw (wtf mojang?)
-            array_map(function (Attribute $attr): NetworkAttribute {
-                return new NetworkAttribute($attr->getId(), $attr->getMinValue(), $attr->getMaxValue(), $attr->getValue(), $attr->getDefaultValue(), []);
-            }, $this->attributeMap->getAll()),
+            array_values(array_map(function (Attribute $attr): NetworkAttribute {
+                return new NetworkAttribute($attr->getId(), $attr->getMinValue(), $attr->getMaxValue(), $attr->getValue());
+            }, $this->attributeMap->getAll())),
             $this->getAllNetworkData(),
             new PropertySyncData([], []),
             [] //TODO: entity links

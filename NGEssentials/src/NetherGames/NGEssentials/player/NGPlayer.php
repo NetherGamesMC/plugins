@@ -100,8 +100,7 @@ class NGPlayer extends Player
     private bool $loaded = false;
     /** @var int */
     private int $joinTime;
-    /** @var int */
-    private int $inputMode;
+    private InputMode $inputMode;
     /** @var float */
     private float $lastPitch;
     /** @var float */
@@ -129,7 +128,7 @@ class NGPlayer extends Player
         $this->lastPitch = $spawnLocation->getPitch();
         $this->lastYaw = $spawnLocation->getYaw();
         $this->lastMove = microtime(true);
-        $this->inputMode = $playerInfo->getExtraData()['CurrentInputMode'];
+        $this->inputMode = InputMode::tryFrom($playerInfo->getExtraData()['CurrentInputMode']) ?? InputMode::UNDEFINED;
         $this->joinTime = time();
         $this->cps = new TickQueue();
 
@@ -162,7 +161,7 @@ class NGPlayer extends Player
         };
     }
 
-    public function getInputMode(): int
+    public function getInputMode(): InputMode
     {
         return $this->inputMode;
     }
@@ -283,8 +282,9 @@ class NGPlayer extends Player
                         new ChunkPosition($X, $Z),
                         $dimensionId,
                         $subChunkCount,
-                        false,
                         null,
+                        false,
+                        [],
                         $emptyChunk
                     ));
                 }
@@ -448,6 +448,9 @@ class NGPlayer extends Player
             $location->z,
             $volume,
             $pitch,
+            0,
+            false,
+            null,
             null
         ));
     }

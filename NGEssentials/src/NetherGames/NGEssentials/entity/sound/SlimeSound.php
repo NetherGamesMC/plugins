@@ -37,7 +37,7 @@ class SlimeSound implements Sound
         return [PlaySoundPacket::create(
             "mob.slime." . ($this->isSmall ? "small" : "big"),
             $pos->x, $pos->y, $pos->z,
-            1, mt_rand(64, 96) / 100, null
+            1, mt_rand(64, 96) / 100, 0, false, null, null
         )];
     }
 }

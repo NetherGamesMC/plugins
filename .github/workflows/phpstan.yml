@@ -292,30 +292,29 @@ jobs:
         uses: actions/cache@v6
         with:
           path: bin
-          key: php-8.4-pm5-linux-x86_64-v1
+          key: php-8.5-pm5-linux-x86_64-v1
 
       - name: Download PHP Release
         if: steps.cache-php.outputs.cache-hit != 'true'
         uses: dsaltares/fetch-gh-release-asset@1.1.2
         with:
-          file: PHP-8.4-Linux-x86_64-PM5.tar.gz
+          file: PHP-8.5-Linux-x86_64-PM5.tar.gz
           repo: NetherGamesMC/php-build-scripts
-          version: "tags/pm5-php-8.4-latest"
+          version: "tags/pm5-php-8.5-latest"
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Unpack PHP Release
         if: steps.cache-php.outputs.cache-hit != 'true'
         run: |
-          tar -xzvf PHP-8.4-Linux-x86_64-PM5.tar.gz
-          rm -f PHP-8.4-Linux-x86_64-PM5.tar.gz
+          tar -xzvf PHP-8.5-Linux-x86_64-PM5.tar.gz
+          rm -f PHP-8.5-Linux-x86_64-PM5.tar.gz
 
       - name: Configure PHP
         run: |
           EXT_DIR=$(find bin/php7/lib/php/extensions -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n 1)
           if [ -n "$EXT_DIR" ]; then
             ABS_EXT_DIR="${{ github.workspace }}/$EXT_DIR"
-            find bin -name "*.ini" -exec sed -i "s|extension_dir = .*|extension_dir = \"$ABS_EXT_DIR\"|g" {} +
-            find bin -name "*.ini" -exec sed -i "s|/home/runner/work/[^/]*/[^/]*/bin/php7/lib/php/extensions/[^/\"']*|$ABS_EXT_DIR|g" {} +
+            find bin -name "*.ini" -exec sed -i "s|^extension_dir[[:space:]]*=.*|extension_dir=\"$ABS_EXT_DIR\"|g" {} +
           fi
           if [ -z "$EXT_DIR" ] || [ ! -f "$EXT_DIR/opcache.so" ]; then
             find bin -name "*.ini" -exec sed -i "s|^zend_extension.*opcache.*|;zend_extension=opcache.so|g" {} +

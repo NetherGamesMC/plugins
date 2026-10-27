@@ -47,7 +47,7 @@ final class ZstdCompressor implements Compressor
         $this->level = $level;
     }
 
-    public function getNetworkId(): int
+    public function getNetworkType(): CompressionAlgorithm
     {
         return CompressionAlgorithm::ZLIB;
     }

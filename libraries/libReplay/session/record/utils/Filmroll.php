@@ -30,7 +30,6 @@ use pocketmine\network\mcpe\protocol\TakeItemActorPacket;
 use pocketmine\network\mcpe\protocol\types\AbilitiesData;
 use pocketmine\network\mcpe\protocol\types\entity\EntityLink;
 use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
-use pocketmine\network\mcpe\protocol\UpdateAbilitiesPacket;
 use pocketmine\network\mcpe\protocol\UpdateBlockPacket;
 use pocketmine\network\NetworkSessionManager;
 use pocketmine\player\Player;
@@ -38,6 +37,7 @@ use pocketmine\player\PlayerInfo;
 use pocketmine\Server;
 use pocketmine\world\format\io\GlobalBlockStateHandlers;
 use pocketmine\world\World;
+use function array_values;
 use function property_exists;
 
 class Filmroll extends NetworkSession
@@ -105,9 +105,9 @@ class Filmroll extends NetworkSession
                 return true;
             case PlayerListPacket::NETWORK_ID:
                 /** @var PlayerListPacket $packet FOR PLAYER ENTITIES */
-                if ($packet->type === PlayerListPacket::TYPE_ADD) {
-                    $convertor = $this->getConverter();
-                    foreach ($packet->entries as $entry) {
+                $convertor = $this->getConverter();
+                foreach ($packet->getEntries() as $entry) {
+                    if ($entry->type === PlayerListPacket::TYPE_ADD) {
                         if (($internalActorUniqueId = $convertor->getInternalId($runtimeId = $entry->actorUniqueId)) === null) {
                             $internalActorUniqueId = $convertor->addEntity($runtimeId);
                         }
@@ -146,7 +146,7 @@ class Filmroll extends NetworkSession
                 if ($player instanceof Player) {
                     $internalActorRuntimeId = $convertor->addEntity($runtimeActorRuntimeId);
 
-                    parent::sendDataPacket(PlayerListPacket::add([PlayerListEntry::createAdditionEntry($uniqueId = $player->getUniqueId(), $internalActorRuntimeId, $player->getDisplayName(), $this->getTypeConverter()->getSkinAdapter()->toSkinData($player->getSkin()), $player->getXuid())]));
+                    parent::sendDataPacket(PlayerListPacket::create([PlayerListEntry::createAdditionEntry($uniqueId = $player->getUniqueId(), $internalActorRuntimeId, $player->getDisplayName(), $this->getTypeConverter()->getSkinAdapter()->toSkinData($player->getSkin()), $player->getXuid())]));
 
                     if ($player instanceof NGPlayer) {
                         $playerData = NGEssentials::getInstance()->getPlayerData();
@@ -169,17 +169,17 @@ class Filmroll extends NetworkSession
                         }
                     }
 
-                    $packet->abilitiesPacket = UpdateAbilitiesPacket::create(new AbilitiesData(
-                        $packet->abilitiesPacket->getData()->getCommandPermission(),
-                        $packet->abilitiesPacket->getData()->getPlayerPermission(),
+                    $packet->abilities = new AbilitiesData(
+                        $packet->abilities->getCommandPermission(),
+                        $packet->abilities->getPlayerPermission(),
                         $internalActorRuntimeId,
-                        $packet->abilitiesPacket->getData()->getAbilityLayers(),
-                    ));
+                        $packet->abilities->getAbilityLayers(),
+                    );
 
                     $packet->actorRuntimeId = $internalActorRuntimeId;
                     parent::sendDataPacket($packet, $immediate);
 
-                    parent::sendDataPacket(PlayerListPacket::remove([PlayerListEntry::createRemovalEntry($uniqueId)]));
+                    parent::sendDataPacket(PlayerListPacket::create([PlayerListEntry::createRemovalEntry($uniqueId)]));
                 } elseif (($internalActorRuntimeId = $convertor->getInternalId($packet->actorRuntimeId)) !== null) {
                     foreach ($packet->links as $index => $link) {
                         if (!$this->convertLink($link)) {
@@ -200,6 +200,7 @@ class Filmroll extends NetworkSession
                         unset($packet->links[$index]);
                     }
                 }
+                $packet->links = array_values($packet->links);
 
                 $packet->actorRuntimeId = $internalActorRuntimeId;
                 $packet->actorUniqueId = $internalActorRuntimeId;

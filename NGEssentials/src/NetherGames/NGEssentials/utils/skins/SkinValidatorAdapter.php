@@ -56,7 +56,7 @@ class SkinValidatorAdapter extends LegacySkinAdapter
     public function toSkinData(Skin $skin): SkinData
     {
         $skinData = parent::toSkinData($skin);
-        $skinData->setVerified(true);
+        $skinData->setTrustedSkinFlag(SkinData::TRUSTED_SKIN_TRUE);
 
         return $skinData;
     }

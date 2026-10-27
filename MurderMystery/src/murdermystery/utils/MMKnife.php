@@ -53,7 +53,6 @@ use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackWrapper;
 use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
 use pocketmine\network\mcpe\protocol\types\PlayerPermissions;
-use pocketmine\network\mcpe\protocol\UpdateAbilitiesPacket;
 use pocketmine\player\Player;
 use pocketmine\timings\Timings;
 use Ramsey\Uuid\Uuid;
@@ -352,7 +351,7 @@ class MMKnife extends Projectile
     protected function sendSpawnPacket(Player $player): void
     {
         $networkSession = $player->getNetworkSession();
-        $networkSession->sendDataPacket(PlayerListPacket::add([PlayerListEntry::createAdditionEntry($this->uuid, $this->id, $this->getName(), $networkSession->getTypeConverter()->getSkinAdapter()->toSkinData(self::$skin))]));
+        $networkSession->sendDataPacket(PlayerListPacket::create([PlayerListEntry::createAdditionEntry($this->uuid, $this->id, $this->getName(), $networkSession->getTypeConverter()->getSkinAdapter()->toSkinData(self::$skin))]));
 
         $networkSession->sendDataPacket(AddPlayerPacket::create(
             $this->getUniqueId(),
@@ -368,7 +367,7 @@ class MMKnife extends Projectile
             ProtocolGameMode::CREATIVE,
             $this->getAllNetworkData(),
             new PropertySyncData([], []),
-            UpdateAbilitiesPacket::create(new AbilitiesData(CommandPermissions::NORMAL, PlayerPermissions::VISITOR, $this->getId() /* TODO: this should be unique ID */, [
+            new AbilitiesData(CommandPermissions::NORMAL, PlayerPermissions::VISITOR, $this->getId() /* TODO: this should be unique ID */, [
                 new AbilitiesLayer(
                     AbilitiesLayer::LAYER_BASE,
                     array_fill(0, AbilitiesLayer::NUMBER_OF_ABILITIES, false),
@@ -376,13 +375,13 @@ class MMKnife extends Projectile
                     0.0,
                     0.0
                 )
-            ])),
+            ]),
             [],
             "",
             DeviceOS::UNKNOWN
         ));
 
-        $networkSession->sendDataPacket(PlayerListPacket::remove([PlayerListEntry::createRemovalEntry($this->uuid)]));
+        $networkSession->sendDataPacket(PlayerListPacket::create([PlayerListEntry::createRemovalEntry($this->uuid)]));
     }
 
     public function getName(): string

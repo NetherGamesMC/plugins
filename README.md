@@ -52,7 +52,8 @@ For the full farewell post, read our [Closure Announcement](https://support.neth
 | **Minecraft Bedrock** | **v1.20.0 - v1.26.30** |
 | **Proxy** | [WaterdogPE](https://github.com/WaterdogPE/WaterdogPE) |
 | **Server Software** | [PocketMine-MP API 5.0.0+](https://github.com/NetherGamesMC/PocketMine-MP) (PM5) |
-| **PHP Runtime** | `PHP 8.4` (64-bit, binaries via [NetherGamesMC/php-build-scripts](https://github.com/NetherGamesMC/php-build-scripts)) |
+| **PHP Runtime** | `PHP 8.5` (64-bit, binaries via [NetherGamesMC/php-build-scripts](https://github.com/NetherGamesMC/php-build-scripts)) |
+| **Base Image** | [`nethergamesmc/pocketmine-mp`](https://hub.docker.com/r/nethergamesmc/pocketmine-mp) (PHP + `PocketMine-MP.phar`) |
 
 ---
 
@@ -228,7 +229,7 @@ NGEssentials is always installed â€” it is the core every gamemode depends on â€
 | `GAME`            | `Lobby`         | Gamemode plugin directory to bake in                                                                                               |
 | `DEV_MODE`        | `true`          | Self-contained server: no proxy, credentials from file. `false` builds a production image reading credentials from the environment |
 | `SERVER_TYPE`     | *(from `GAME`)* | NGEssentials server type, e.g. `BW`, `SW`, `SB`; derived from `GAME` unless set                                                    |
-| `PMMP_REF`        | `stable`        | Branch or tag of the PocketMine fork to build                                                                                      |
+| `PMMP_IMAGE`      | `nethergamesmc/pocketmine-mp:latest` | Image providing PHP and `PocketMine-MP.phar`                                                                  |
 | `COMPOSER_PREFER` | `--prefer-dist` | `--prefer-source` installs over git instead of the GitHub API                                                                      |
 
 Assets are mounted, not baked. The [assets](https://github.com/NetherGamesMC/assets) repository is several hundred megabytes, so instead of copying it into every image, [docker/entrypoint.sh](docker/entrypoint.sh) installs the parts the gamemode needs when the container starts:

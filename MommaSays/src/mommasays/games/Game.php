@@ -140,6 +140,9 @@ abstract class Game extends GameListener
             $pos->getZ(),
             100,
             1,
+            0,
+            false,
+            null,
             null
         ));
     }
@@ -185,6 +188,9 @@ abstract class Game extends GameListener
             $pos->getZ(),
             100,
             1,
+            0,
+            false,
+            null,
             null
         ));
     }

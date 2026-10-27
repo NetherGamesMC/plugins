@@ -78,6 +78,9 @@ trait SoundCosmeticTrait
                 $pos->getZ(),
                 $soundKey[self::SOUND_VOLUME_KEY] ?? 1,
                 $soundKey[self::SOUND_PITCH_KEY] ?? 1,
+                0,
+                false,
+                null,
                 null
             ),
             default => throw new InvalidArgumentException("Invalid sound type"),

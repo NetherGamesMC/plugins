@@ -37,12 +37,12 @@
 # CI packs with the private pharbuilder-rs. This image uses pmmp/DevTools instead so the build works
 # without private access; the resulting phar is equivalent for running a server.
 #
-FROM ubuntu:noble AS build
+FROM ubuntu:resolute AS build
 
 ARG PLUGIN=SkyBlock
 ARG COMPOSER_FILE=
 ARG PHAR_NAME=
-ARG PHP_RELEASE_TAG=pm5-php-8.4-latest
+ARG PHP_RELEASE_TAG=pm5-php-8.5-latest
 ARG DEVTOOLS_VERSION=1.17.2
 # --prefer-dist matches CI. Switch to --prefer-source to install over git instead, which fetches from
 # the git remotes rather than pulling dist archives through the GitHub API.
@@ -58,12 +58,12 @@ ENV COMPOSER_CACHE_DIR=/root/.cache/composer
 WORKDIR /toolchain
 
 # --time-cond turns each fetch into a conditional request: the file is re-downloaded only when the
-# remote copy is newer. That keeps moving tags such as pm5-php-8.4-latest current without pulling
+# remote copy is newer. That keeps moving tags such as pm5-php-8.5-latest current without pulling
 # ~100 MB on every build.
 RUN --mount=type=cache,id=ng-plugin-downloads,target=/downloads,sharing=locked \
-    PHP_TARBALL="/downloads/PHP-8.4-Linux-x86_64-PM5.tar.gz" \
+    PHP_TARBALL="/downloads/PHP-8.5-Linux-x86_64-PM5.tar.gz" \
  && curl -fsSL --time-cond "$PHP_TARBALL" -o "$PHP_TARBALL" \
-      "https://github.com/NetherGamesMC/php-build-scripts/releases/download/${PHP_RELEASE_TAG}/PHP-8.4-Linux-x86_64-PM5.tar.gz" \
+      "https://github.com/NetherGamesMC/php-build-scripts/releases/download/${PHP_RELEASE_TAG}/PHP-8.5-Linux-x86_64-PM5.tar.gz" \
  && tar -xzf "$PHP_TARBALL"
 
 # The published PHP release hardcodes the build machine's extension_dir, and bundles ini entries for

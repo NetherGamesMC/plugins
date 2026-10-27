@@ -159,8 +159,8 @@ class EntityManager extends BaseClass
             }
 
             if (count($entries) > 0) {
-                array_unshift($packets, PlayerListPacket::add($entries));
-                $packets[] = PlayerListPacket::remove($entries);
+                array_unshift($packets, PlayerListPacket::create($entries));
+                $packets[] = PlayerListPacket::create(array_map(fn(PlayerListEntry $entry) => PlayerListEntry::createRemovalEntry($entry->uuid), $entries));
             }
 
             return $packets;

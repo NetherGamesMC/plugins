@@ -34,7 +34,7 @@ class RabbitHopSound implements Sound
         return [PlaySoundPacket::create(
             "mob.rabbit.hop",
             $pos->x, $pos->y, $pos->z,
-            0.1, 1, null
+            0.1, 1, 0, false, null, null
         )];
     }
 }

@@ -2,8 +2,8 @@
 #
 # Runnable game server image
 #
-# Builds a complete, self-contained PocketMine-MP server for one gamemode: the server phar, the
-# NGEssentials core plugin, and the gamemode plugin, all from source. Nothing needs to be staged into
+# Builds a complete, self-contained PocketMine-MP server for one gamemode: PHP and the server phar
+# from nethergamesmc/pocketmine-mp, plus the NGEssentials core plugin and the gamemode plugin from source. Nothing needs to be staged into
 # the build context beforehand — only Docker and a GitHub token.
 #
 #   export GITHUB_TOKEN=github_pat_...
@@ -23,7 +23,7 @@
 #   GAME         gamemode directory: Lobby, Bedwars, Skywars, Duels, TheBridge, Conquests,
 #                MurderMystery, SurvivalGames, UHC, MommaSays, Soccer, Meltdown, SkyBlock, Factions
 #   SERVER_TYPE  NGEssentials server type; derived from GAME when unset
-#   PMMP_REF     branch or tag of NetherGamesMC/PocketMine-MP to build (default: stable)
+#   PMMP_IMAGE   image providing PHP and PocketMine-MP.phar (default: nethergamesmc/pocketmine-mp:latest)
 #
 # Assets (arena worlds, arenas.yml, waiting lobbies) live in the separate NetherGamesMC/assets
 # repository, which is hundreds of megabytes. They are mounted at runtime rather than baked in — mount
@@ -35,22 +35,22 @@
 # Not included: the quiche shared library. It is only needed for QUIC proxy transport, which is off
 # when NGEssentials runs in development mode. See the root Dockerfile for the production layout.
 #
-ARG PHP_RELEASE_TAG=pm5-php-8.4-latest
+ARG PMMP_IMAGE=nethergamesmc/pocketmine-mp:latest
 ARG DEVTOOLS_VERSION=1.17.2
-ARG PMMP_REF=stable
 ARG VANILLAGEN_REF=NG
 # --prefer-dist matches CI and needs the token for GitHub-hosted archives. --prefer-source installs
 # over git instead, which works against public repositories without hitting the GitHub API.
 ARG COMPOSER_PREFER=--prefer-dist
 
+FROM ${PMMP_IMAGE} AS pocketmine
+
 # --------------------------------------------------------------------------------------------------
-# Toolchain: PHP 8.4 (PM5 build), Composer and DevTools. Shared by every build stage below.
+# Toolchain: PHP (from PMMP_IMAGE), Composer and DevTools. Shared by every build stage below.
 # This mirrors docker/build-plugin.Dockerfile; that file builds a single plugin phar for distribution,
 # this one assembles a whole server.
 # --------------------------------------------------------------------------------------------------
-FROM ubuntu:noble AS toolchain
+FROM ubuntu:resolute AS toolchain
 
-ARG PHP_RELEASE_TAG
 ARG DEVTOOLS_VERSION
 
 RUN apt-get update \
@@ -61,13 +61,9 @@ ENV COMPOSER_CACHE_DIR=/root/.cache/composer
 
 WORKDIR /toolchain
 
-RUN --mount=type=cache,id=ng-plugin-downloads,target=/downloads,sharing=locked \
-    PHP_TARBALL="/downloads/PHP-8.4-Linux-x86_64-PM5.tar.gz" \
- && curl -fsSL --time-cond "$PHP_TARBALL" -o "$PHP_TARBALL" \
-      "https://github.com/NetherGamesMC/php-build-scripts/releases/download/${PHP_RELEASE_TAG}/PHP-8.4-Linux-x86_64-PM5.tar.gz" \
- && tar -xzf "$PHP_TARBALL"
+COPY --from=pocketmine /opt/pocketmine/bin bin
 
-# The published release hardcodes the build machine's extension_dir; repoint it and disable anything
+# The image's php.ini points extension_dir at /opt/pocketmine; repoint it and disable anything
 # that is not actually shipped.
 RUN EXT_DIR="$(find bin/php7/lib/php/extensions -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n 1)" \
  && if [ -n "$EXT_DIR" ]; then \
@@ -88,33 +84,6 @@ RUN --mount=type=cache,id=ng-plugin-downloads,target=/downloads,sharing=locked \
       "https://github.com/pmmp/DevTools/releases/download/${DEVTOOLS_VERSION}/DevTools.phar" \
  && cp /downloads/composer.phar /toolchain/composer.phar \
  && cp "/downloads/DevTools-${DEVTOOLS_VERSION}.phar" /toolchain/DevTools.phar
-
-# --------------------------------------------------------------------------------------------------
-# PocketMine-MP.phar, built from the NetherGames fork exactly as the build workflow does.
-# --------------------------------------------------------------------------------------------------
-FROM toolchain AS pmmp
-
-ARG PMMP_REF
-ARG COMPOSER_PREFER
-
-# Submodules are test/example fixtures only and are not packed into the phar, so they are skipped.
-RUN git clone --depth 1 --branch "${PMMP_REF}" \
-      https://github.com/NetherGamesMC/PocketMine-MP.git /pmmp
-
-WORKDIR /pmmp
-
-RUN --mount=type=secret,id=github_token,required=true \
-    --mount=type=cache,id=ng-plugin-composer,target=/root/.cache/composer,sharing=locked \
-    if [ ! -s /run/secrets/github_token ]; then \
-      echo "ERROR: the github_token secret is empty." >&2; exit 1; \
-    fi \
- && COMPOSER_AUTH="{\"github-oauth\":{\"github.com\":\"$(cat /run/secrets/github_token)\"}}" \
-    /toolchain/bin/php7/bin/php /toolchain/composer.phar install \
-      "${COMPOSER_PREFER}" --no-dev --classmap-authoritative --no-interaction --no-progress
-
-RUN /toolchain/bin/php7/bin/php -dphar.readonly=0 build/server-phar.php \
-      --git "$(git rev-parse HEAD)" \
- && ls -lh PocketMine-MP.phar
 
 # --------------------------------------------------------------------------------------------------
 # VanillaGenerator.phar. Factions generates its "wild" world with the vanilla_overworld generator and
@@ -191,7 +160,7 @@ RUN mkdir -p /out \
 # --------------------------------------------------------------------------------------------------
 # Runtime
 # --------------------------------------------------------------------------------------------------
-FROM ubuntu:noble
+FROM ubuntu:resolute
 
 ARG GAME=Lobby
 ARG SERVER_TYPE=
@@ -210,7 +179,7 @@ RUN apt-get update \
 WORKDIR /home
 
 COPY --from=toolchain /toolchain/bin /home/bin
-COPY --from=pmmp /pmmp/PocketMine-MP.phar /home/PocketMine-MP.phar
+COPY --from=pocketmine /opt/pocketmine/PocketMine-MP.phar /home/PocketMine-MP.phar
 COPY --from=plugins /out/ /home/plugins/
 COPY --from=vanillagen /out/VanillaGenerator.phar /home/.VanillaGenerator.phar
 

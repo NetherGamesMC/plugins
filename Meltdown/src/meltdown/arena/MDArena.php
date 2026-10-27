@@ -161,6 +161,9 @@ class MDArena extends Arena
                 $location->getZ(),
                 1,
                 1,
+                0,
+                false,
+                null,
                 null
             ));
             $this->broadcastMessage(TextFormat::YELLOW . $killer->getName() . TextFormat::WHITE . " knocked down " . TextFormat::YELLOW . $killed->getName() . TextFormat::WHITE . " a level ({$statsData->getValue($killer, StatsData::MD_KILLS)} players knocked)");

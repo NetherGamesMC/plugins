@@ -3,9 +3,9 @@
 #
 # docker build -t nethergamesmc/servers:base .
 #
+# PHP and PocketMine-MP.phar come from nethergamesmc/pocketmine-mp:latest.
+#
 # Expects the build context to contain, in addition to this repo:
-#   bin/                     - PHP 8.4 PM5 binary (fetched from NetherGamesMC/php-build-scripts)
-#   PocketMine-MP.phar       - built from NetherGamesMC/PocketMine-MP (build/server-phar.php)
 #   NGEssentials.phar        - built by this repo's build workflow
 #   quiche-build/            - quiche checkout built with `cargo build --release --features ffi`
 #
@@ -13,7 +13,9 @@
 # runtime, e.g.:
 #   docker run -v /path/to/key.pem:/home/quiche/key.pem -v /path/to/cert.pem:/home/quiche/cert.pem ...
 #
-FROM ubuntu:noble
+FROM nethergamesmc/pocketmine-mp:latest AS pocketmine
+
+FROM ubuntu:resolute
 
 EXPOSE 19132
 
@@ -21,8 +23,9 @@ RUN apt update && apt dist-upgrade -y && apt autoremove -y && apt install -y --n
 
 WORKDIR /home
 
-ADD bin /home/bin
-ADD PocketMine-MP.phar /home/PocketMine-MP.phar
+COPY --from=pocketmine /opt/pocketmine/bin /home/bin
+COPY --from=pocketmine /opt/pocketmine/PocketMine-MP.phar /home/PocketMine-MP.phar
+RUN sed -i "s|/opt/pocketmine/bin|/home/bin|" /home/bin/php7/bin/php.ini
 ADD docker/start.sh /home/start.sh
 ADD docker/server.properties /home/server.properties
 ADD docker/pocketmine.yml /home/pocketmine.yml
