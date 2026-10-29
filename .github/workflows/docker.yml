@@ -217,6 +217,8 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         if: steps.cache-quiche.outputs.cache-hit != 'true'
+        with:
+          build-warnings: warn
 
       - name: Build quiche
         if: steps.cache-quiche.outputs.cache-hit != 'true'
@@ -321,7 +323,7 @@ jobs:
     name: Build & push ${{ matrix.tag }} image
     needs: [changes, base]
     runs-on: ubuntu-latest
-    if: "always() && github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.matrix != '{\"include\":[]}' && (needs.base.result == 'success' || needs.base.result == 'skipped')"
+    if: "!failure() && !cancelled() && github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.matrix != '{\"include\":[]}'"
     strategy:
       fail-fast: false
       max-parallel: 6
@@ -370,7 +372,7 @@ jobs:
     name: Build & push uhc image
     needs: [changes, base, vanillagenerator]
     runs-on: ubuntu-latest
-    if: "always() && github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.build_uhc == 'true' && (needs.base.result == 'success' || needs.base.result == 'skipped') && (needs.vanillagenerator.result == 'success' || needs.vanillagenerator.result == 'skipped')"
+    if: "!failure() && !cancelled() && github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.build_uhc == 'true'"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -420,7 +422,7 @@ jobs:
     name: Build & push factions image
     needs: [changes, base, vanillagenerator]
     runs-on: ubuntu-latest
-    if: "always() && github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.build_factions == 'true' && (needs.base.result == 'success' || needs.base.result == 'skipped') && (needs.vanillagenerator.result == 'success' || needs.vanillagenerator.result == 'skipped')"
+    if: "!failure() && !cancelled() && github.event.workflow_run.conclusion == 'success' && needs.changes.outputs.build_factions == 'true'"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
