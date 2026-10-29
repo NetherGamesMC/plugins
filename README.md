@@ -15,7 +15,7 @@
 [![Docker](https://github.com/NetherGamesMC/plugins/actions/workflows/docker.yml/badge.svg)](https://github.com/NetherGamesMC/plugins/actions/workflows/docker.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Target API](https://img.shields.io/badge/PocketMine--MP-API%205.0.0+-orange.svg)](https://github.com/NetherGamesMC/PocketMine-MP)
-[![Minecraft Bedrock](https://img.shields.io/badge/Minecraft%20Bedrock-v1.20.0--v1.26.30-brightgreen.svg)](https://minecraft.net)
+[![Minecraft Bedrock](https://img.shields.io/badge/Minecraft%20Bedrock-v1.20.0--v1.26.60-brightgreen.svg)](https://minecraft.net)
 
 **The complete collection of server plugins, minigames, and internal libraries powering the NetherGames Network.**
 
@@ -49,7 +49,7 @@ For the full farewell post, read our [Closure Announcement](https://support.neth
 
 | Component | Supported Version / Detail |
 | :--- | :--- |
-| **Minecraft Bedrock** | **v1.20.0 - v1.26.30** |
+| **Minecraft Bedrock** | **v1.20.0 - v1.26.60** |
 | **Proxy** | [WaterdogPE](https://github.com/WaterdogPE/WaterdogPE) |
 | **Server Software** | [PocketMine-MP API 5.0.0+](https://github.com/NetherGamesMC/PocketMine-MP) (PM5) |
 | **PHP Runtime** | `PHP 8.5` (64-bit, binaries via [NetherGamesMC/php-build-scripts](https://github.com/NetherGamesMC/php-build-scripts)) |

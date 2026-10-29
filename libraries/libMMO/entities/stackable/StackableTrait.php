@@ -111,7 +111,7 @@ trait StackableTrait
                     unset($metadata[EntityMetadataProperties::ALWAYS_SHOW_NAMETAG], $metadata[EntityMetadataProperties::NAMETAG], $metadata[EntityMetadataProperties::SCORE_TAG]);
 
                     $entityId = self::nextRuntimeId();
-                    $pk1 = AddActorPacket::create($entityId, $entityId, static::getNetworkTypeId(), $this->location->asVector3(), new Vector3(0, 0, 0), $this->getLocation()->getPitch(), $this->getLocation()->getYaw(), $this->getLocation()->getYaw(), $this->getLocation()->getYaw(), [], $metadata, new PropertySyncData([], []), []);
+                    $pk1 = AddActorPacket::create($entityId, $entityId, static::getNetworkTypeId(), $this->location->asVector3(), new Vector3(0, 0, 0), $this->getLocation()->getPitch(), $this->getLocation()->getYaw(), $this->getLocation()->getYaw(), $this->getLocation()->getYaw(), [], $metadata, new PropertySyncData([], []), [], null);
 
                     $cached[$networkId] = [$entityId, $pk1];
                 }

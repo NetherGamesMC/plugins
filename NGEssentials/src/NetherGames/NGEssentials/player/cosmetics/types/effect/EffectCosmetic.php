@@ -74,7 +74,8 @@ abstract class EffectCosmetic extends Cosmetic
                         [],
                         [],
                         new PropertySyncData([], []),
-                        []
+                        [],
+                        null
                     )
                 ]);
             }

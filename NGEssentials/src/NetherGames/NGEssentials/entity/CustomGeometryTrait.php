@@ -67,6 +67,7 @@ trait CustomGeometryTrait
                 )
             ]),
             array_values($this->links),
+            null,
             "", DeviceOS::UNKNOWN
         ));
 

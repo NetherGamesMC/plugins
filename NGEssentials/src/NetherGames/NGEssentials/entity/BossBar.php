@@ -72,7 +72,8 @@ class BossBar
             [],
             $this->metadata->getAll(),
             new PropertySyncData([], []),
-            []
+            [],
+            null
         ));
 
         $networkSession->sendDataPacket(UpdateAttributesPacket::create($this->entityId, array_map(static function (Attribute $attr): UpdateAttribute {

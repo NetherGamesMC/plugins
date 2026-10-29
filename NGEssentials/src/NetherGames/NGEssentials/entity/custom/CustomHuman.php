@@ -90,6 +90,7 @@ class CustomHuman extends Custom
                 )
             ]),
             [],
+            null,
             "",
             DeviceOS::UNKNOWN
         );

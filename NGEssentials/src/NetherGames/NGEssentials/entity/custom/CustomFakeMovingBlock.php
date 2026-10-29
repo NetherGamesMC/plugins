@@ -69,7 +69,8 @@ class CustomFakeMovingBlock extends CustomFakeBlock
             [],
             $this->metadata->getAll(),
             new PropertySyncData([], []),
-            []
+            [],
+            null
         );
     }
 }

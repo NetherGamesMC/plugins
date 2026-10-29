@@ -124,7 +124,8 @@ class TestCommand extends BaseCommand
                     [],
                     $this->metadata->getAll(),
                     new PropertySyncData([], []),
-                    []
+                    [],
+                    null
                 );
             }
         });

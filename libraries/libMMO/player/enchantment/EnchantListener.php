@@ -648,7 +648,8 @@ class EnchantListener extends BaseListener
                                 [],
                                 [],
                                 new PropertySyncData([], []),
-                                []
+                                [],
+                                null
                             )
                         ]);
 

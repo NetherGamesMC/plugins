@@ -377,6 +377,7 @@ class MMKnife extends Projectile
                 )
             ]),
             [],
+            null,
             "",
             DeviceOS::UNKNOWN
         ));

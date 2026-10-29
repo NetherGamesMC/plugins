@@ -82,7 +82,8 @@ class CustomFakeBlock extends Custom
             [],
             $this->metadata->getAll(),
             new PropertySyncData([], []),
-            []
+            [],
+            null
         );
     }
 }

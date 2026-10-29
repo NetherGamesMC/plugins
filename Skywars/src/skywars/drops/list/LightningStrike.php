@@ -47,7 +47,8 @@ class LightningStrike extends BaseDrop
             [],
             [],
             new PropertySyncData([], []),
-            []
+            [],
+            null
         );
         $player->getWorld()->broadcastPacketToViewers($location->asVector3(), $packet);
 

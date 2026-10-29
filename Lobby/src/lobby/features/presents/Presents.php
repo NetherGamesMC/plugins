@@ -143,7 +143,8 @@ class Presents
                             [],
                             [],
                             new PropertySyncData([], []),
-                            []
+                            [],
+                            null
                         );
 
                         foreach ($this->getNGEssentials()->getPlayerManager()->unsetFPSPlayers($defaultWorld->getPlayers()) as $player) {

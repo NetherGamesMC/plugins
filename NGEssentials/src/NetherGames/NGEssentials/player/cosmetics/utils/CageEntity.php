@@ -45,7 +45,8 @@ class CageEntity extends Custom
             [],
             $this->metadata->getAll(),
             new PropertySyncData([], []),
-            []
+            [],
+            null
         );
     }
 

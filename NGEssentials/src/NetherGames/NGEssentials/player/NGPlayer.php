@@ -285,7 +285,8 @@ class NGPlayer extends Player
                         null,
                         false,
                         [],
-                        $emptyChunk
+                        $emptyChunk,
+                        false
                     ));
                 }
             }

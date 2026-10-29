@@ -56,7 +56,8 @@ class CustomFlagEntity extends BaseFlagEntity
             }, $this->attributeMap->getAll())),
             $this->getAllNetworkData(),
             new PropertySyncData([], []),
-            [] //TODO: entity links
+            [], //TODO: entity links
+            null
         ));
 
         if ($this->linkPacket !== null) {
