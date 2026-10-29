@@ -37,7 +37,6 @@ use pocketmine\player\PlayerInfo;
 use pocketmine\Server;
 use pocketmine\world\format\io\GlobalBlockStateHandlers;
 use pocketmine\world\World;
-use function array_values;
 use function property_exists;
 
 class Filmroll extends NetworkSession
@@ -195,12 +194,13 @@ class Filmroll extends NetworkSession
                 /** @var AddActorPacket $packet */
                 $internalActorRuntimeId = $this->getConverter()->addEntity($packet->actorRuntimeId);
 
-                foreach ($packet->links as $index => $link) {
-                    if (!$this->convertLink($link)) {
-                        unset($packet->links[$index]);
+                $links = [];
+                foreach ($packet->links as $link) {
+                    if ($this->convertLink($link)) {
+                        $links[] = $link;
                     }
                 }
-                $packet->links = array_values($packet->links);
+                $packet->links = $links;
 
                 $packet->actorRuntimeId = $internalActorRuntimeId;
                 $packet->actorUniqueId = $internalActorRuntimeId;
