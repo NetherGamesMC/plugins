@@ -323,12 +323,23 @@ jobs:
             find bin -name "*.ini" -exec sed -i "s|^extension.*ext_quiche.*|;extension=ext_quiche.so|g" {} +
           fi
 
+      - name: Resolve PocketMine-MP revisions
+        id: revisions
+        env:
+          NG_TOKEN: ${{ secrets.ng_token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          export GH_TOKEN="${NG_TOKEN:-$GITHUB_TOKEN}"
+          PMMP=$(gh api repos/NetherGamesMC/PocketMine-MP/commits/stable --jq .sha)
+          PROTOCOL=$(gh api repos/NetherGamesMC/BedrockProtocol/commits/master --jq .sha)
+          echo "key=${PMMP:0:12}-${PROTOCOL:0:12}" >> "$GITHUB_OUTPUT"
+
       - name: Cache vendor
         id: cache-vendor
         uses: actions/cache@v6
         with:
           path: ${{ matrix.project }}/vendor
-          key: vendor-dev-${{ matrix.project }}-${{ hashFiles(format('{0}/composer.json', matrix.project), 'shared/repositories.json') }}
+          key: vendor-dev-${{ matrix.project }}-${{ steps.revisions.outputs.key }}-${{ hashFiles(format('{0}/composer.json', matrix.project), 'shared/repositories.json') }}
 
       - name: Cache Composer metadata & repo cache
         if: steps.cache-vendor.outputs.cache-hit != 'true'
